@@ -1,0 +1,63 @@
+export const SideBarLinks = [
+  {
+    id: 1,
+    text: "Dashboard",
+    link: "/admin",
+    isDropDown: false,
+    activeImage: "/dashboard/active/dashboard.svg",
+    inActiveImage: "/dashboard/inactive/dashboard.svg",
+  },
+  {
+    id: 2,
+    text: "Users Management",
+    link: "/admin/users-management",
+    isDropDown: false,
+    activeImage: "/dashboard/active/users-management.svg",
+    inActiveImage: "/dashboard/inactive/users-management.svg",
+  },
+
+  {
+    id: 3,
+    text: "Payment Management",
+    link: "/admin/payment-management",
+    activeImage: "/dashboard/active/payment-management.svg",
+    inActiveImage: "/dashboard/inactive/payment-management.svg",
+    isDropDown: false,
+  },
+  {
+    id: 4,
+    text: "Dispute Management",
+    link: "/admin/dispute-management",
+    isDropDown: false,
+    activeImage: "/dashboard/active/dispute-management.svg",
+    inActiveImage: "/dashboard/inactive/dispute-management.svg",
+  },
+  {
+    id: 5,
+    text: "Service Management",
+    link: "/admin/service-management",
+    activeImage: "/dashboard/active/service-management.svg",
+    inActiveImage: "/dashboard/inactive/service-management.svg",
+    isDropDown: false,
+  },
+  {
+    id: 6,
+    text: "Promotional Offers",
+    link: "/admin/promotional-offers",
+    isDropDown: true,
+    childDropdown: [
+      { text: "Promotional", link: "/admin/promotional-offers/promotional" },
+      { text: "Referrals", link: "/admin/promotional-offers/referrals" },
+    ],
+    activeImage: "/dashboard/active/promotional-offers.svg",
+    inActiveImage: "/dashboard/inactive/promotional-offers.svg",
+  },
+  {
+    id: 7,
+    text: "Support & Feedback",
+    link: "/admin/support",
+    isDropDown: false,
+    activeImage: "/dashboard/active/support.svg",
+    inActiveImage: "/dashboard/inactive/support.svg",
+  },
+];

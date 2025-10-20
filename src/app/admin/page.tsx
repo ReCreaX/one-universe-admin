@@ -16,7 +16,7 @@ const DashboardPage = () => {
     setIsOpen(false);
   };
   return (
-    <main className="flex flex-col gap-[8px] md:gap-[16px]">
+    <main className="flex flex-col flex-1  gap-[8px] md:gap-[16px]">
       <section className="flex flex-col gap-2">
         <h3 className="text-[#171417] font-bold text-[1.5rem] leading-[120%]">
           Dashboard
@@ -145,7 +145,7 @@ const DashboardPage = () => {
         </aside>
       </section>
 
-      <section className="border border-[#E8E3E3] min-h-[475px] rounded-[16px] p-[12px] md:py-[24px] md:px-[25px] mb-[40px]">
+      <section className="border flex-1 border-[#E8E3E3] min-h-[475px] rounded-[16px] p-[12px] md:py-[24px] md:px-[25px] mb-[40px]">
         <section className="">
           <section className=" flex items-center justify-between">
             <h3 className="text-[#171417] font-medium leading-[140%] text-[1.25rem]">
@@ -213,6 +213,7 @@ const DashboardPage = () => {
           </section>
         </section>
       </section>
+      {/* <section className="h-[300px]"></section> */}
     </main>
   );
 };

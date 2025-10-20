@@ -1,11 +1,16 @@
 import { ListFilter, LogOut, Search } from "lucide-react";
 import React from "react";
+import EmptyDispute from "./EmptyDispute";
+import NoResultDispute from "./NoResultDispute";
+import DisputeTable from "./DisputeTable";
+import Pagination from "@/shared/Pagination/Pagination";
+import DisputeDetailsModal from "./DisputeDetails";
 
 const DisputeManagementPage = () => {
   return (
     <main className="flex flex-col gap-[8px] md:gap-[16px]">
-      <section className=" flex flex-col justify-between md:flex-row gap-[16px]">
-        <section className="flex flex-col  gap-2">
+      <section className="flex flex-col justify-between md:flex-row gap-[16px]">
+        <section className="flex flex-col gap-2">
           <h3 className="text-[#171417] font-bold text-[1.5rem] sm:text-[1.25rem] leading-[120%]">
             Dispute Management
           </h3>
@@ -14,15 +19,16 @@ const DisputeManagementPage = () => {
           </p>
         </section>
         <button
-          className="[background:var(--primary-radial)] px-[24px]  w-full md:w-fit flex items-center justify-center gap-[16px] text-[#FDFDFD] h-[46px] rounded-[20px] cursor-pointer"
+          className="[background:var(--primary-radial)] px-[24px] w-full md:w-fit flex items-center justify-center gap-[16px] text-[#FDFDFD] h-[46px] rounded-[20px] cursor-pointer"
           type="button"
         >
           <p className="">Export</p>
           <LogOut size={16} />
         </button>
       </section>
+
       <section className="my-[30px] md:px-[15px]">
-        <section className="">
+        <section className="pb-3">
           <h3 className="text-[#171417] font-medium text-[1.25rem] leading-[140%] mb-[20px]">
             Dispute
           </h3>
@@ -40,7 +46,7 @@ const DisputeManagementPage = () => {
             </div>
             <div className="">
               <button
-                className="border border-[#B7B6B7] flex items-center h-[46px] md:h-[38px]  px-[8px] rounded-[8px] gap-2 cursor-pointer"
+                className="border border-[#B7B6B7] flex items-center h-[46px] md:h-[38px] px-[8px] rounded-[8px] gap-2 cursor-pointer"
                 type="button"
               >
                 <ListFilter size={16} />
@@ -51,7 +57,20 @@ const DisputeManagementPage = () => {
             </div>
           </aside>
         </section>
+
+        <hr />
+
+        <section className="mt-4 py-10">
+          {/* <EmptyDispute /> */}
+          {/* <NoResultDispute /> */}
+          <DisputeTable />
+        </section>
+
+        <section className="mt-8 mb-[50px] w- flex items-center justify-center">
+          <Pagination totalPages={30} />
+        </section>
       </section>
+      <DisputeDetailsModal />
     </main>
   );
 };
