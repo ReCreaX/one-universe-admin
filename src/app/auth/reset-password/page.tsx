@@ -4,6 +4,9 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Eye, EyeOff, Info } from "lucide-react";
 import React, { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import authService from "@/services/authService";
+import useToastStore from "@/store/useToastStore";
 
 const ResetPasswordPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -12,6 +15,11 @@ const ResetPasswordPage = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const email = searchParams.get("email") || "";
+  const code = searchParams.get("code") || "";
+  const { showToast } = useToastStore();
+  const router = useRouter();
 
   const isFormValid = password.trim() !== "" && confirmPassword.trim() !== "";
 
@@ -56,8 +64,24 @@ const ResetPasswordPage = () => {
 
     setIsLoading(true);
     try {
-      // Implement reset password logic here
+      const response = await authService.resetPassword({
+        email,
+        otpCode: code,
+        newPassword: password,
+        confirmPassword,
+      });
+
+      if (response.error) {
+        return;
+      }
+
       console.log("Password reset successful!");
+      showToast(
+        "success",
+        "Your password has been reset successfully",
+        "You can now log in with your new credentials."
+      );
+      router.push("/auth/sign-in");
     } catch (err) {
       console.error("Error resetting password:", err);
     } finally {
