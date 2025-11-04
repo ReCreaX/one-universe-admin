@@ -1,6 +1,4 @@
-// services/authService.ts
 import { HttpService } from "./httpService";
-import { signIn, signOut } from "next-auth/react";
 
 class DashboardService {
   private request = new HttpService();
