@@ -4,34 +4,54 @@ import React, { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-interface BuyerFiltersProps {
+interface SellerFiltersProps {
   onApplyFilter: (filters: {
-    status?: "inactive" | "active" | "pending";
+    status?: "active" | "inactive" | "pending";
+    verification?: "verified" | "unverified";
     fromDate?: Date;
     toDate?: Date;
   }) => void;
 }
 
-const BuyerFilters: React.FC<BuyerFiltersProps> = ({ onApplyFilter }) => {
+const SellerFilters: React.FC<SellerFiltersProps> = ({ onApplyFilter }) => {
   const [accountStatusOpen, setAccountStatusOpen] = useState(false);
+  const [verificationStatusOpen, setVerificationStatusOpen] = useState(false);
+
   const [selectedStatus, setSelectedStatus] = useState<
-    "inactive" | "active" | "pending" | undefined
+    "active" | "inactive" | "pending" | undefined
+  >(undefined);
+  const [selectedVerificationStatus, setSelectedVerificationStatus] = useState<
+    "verified" | "unverified" | undefined
   >(undefined);
 
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [toDate, setToDate] = useState<Date | undefined>(undefined);
 
-  const optionsMap = [
+  const accountOptionsMap = [
     { label: "Active", value: "active" as const },
     { label: "Inactive", value: "inactive" as const },
     { label: "pending", value: "pending" as const },
   ];
 
-  const handleStatusSelect = (
-    optionValue: "inactive" | "active" | "pending"
+  const verificationOptionsMap = [
+    { label: "Verified", value: "verified" as const },
+    { label: "Unverified", value: "unverified" as const },
+  ];
+
+  const handleAccountStatusSelect = (
+    optionValue: "active" | "inactive" | "pending"
   ) => {
     setSelectedStatus(selectedStatus === optionValue ? undefined : optionValue);
     setAccountStatusOpen(false);
+  };
+
+  const handleVerificationStatusSelect = (
+    optionValue: "verified" | "unverified"
+  ) => {
+    setSelectedVerificationStatus(
+      selectedVerificationStatus === optionValue ? undefined : optionValue
+    );
+    setVerificationStatusOpen(false);
   };
 
   const handleFromDateChange = (date: Date | null) => {
@@ -157,6 +177,7 @@ const BuyerFilters: React.FC<BuyerFiltersProps> = ({ onApplyFilter }) => {
               setFromDate(undefined);
               setToDate(undefined);
               setSelectedStatus(undefined);
+              setSelectedVerificationStatus(undefined);
             }}
           >
             <X />
@@ -178,7 +199,8 @@ const BuyerFilters: React.FC<BuyerFiltersProps> = ({ onApplyFilter }) => {
               >
                 <span className={selectedStatus ? "" : "text-[#757575]"}>
                   {selectedStatus
-                    ? optionsMap.find((o) => o.value === selectedStatus)?.label
+                    ? accountOptionsMap.find((o) => o.value === selectedStatus)
+                        ?.label
                     : "Select Status"}
                 </span>
                 <ChevronUp
@@ -190,12 +212,12 @@ const BuyerFilters: React.FC<BuyerFiltersProps> = ({ onApplyFilter }) => {
 
               {accountStatusOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-[#E5E5E5] rounded-[8px] overflow-hidden shadow-lg z-10">
-                  {optionsMap.map((option, index) => (
+                  {accountOptionsMap.map((option, index) => (
                     <button
                       key={option.value}
-                      onClick={() => handleStatusSelect(option.value)}
+                      onClick={() => handleAccountStatusSelect(option.value)}
                       className={`w-full px-2 h-[38px] flex items-center gap-2 text-left hover:bg-gray-50 transition-colors ${
-                        index !== optionsMap.length - 1
+                        index !== accountOptionsMap.length - 1
                           ? "border-b border-[#E5E5E5]"
                           : ""
                       }`}
@@ -209,6 +231,70 @@ const BuyerFilters: React.FC<BuyerFiltersProps> = ({ onApplyFilter }) => {
                         }`}
                       >
                         {selectedStatus === option.value && (
+                          <Check className="w-3 h-3 text-white" />
+                        )}
+                      </div>
+                      <span className="text-[1rem] leading-[140%] font-normal text-[#3C3C3C]">
+                        {option.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <h3 className="text-[#05060D] font-medium text-[1rem]">
+              Verification Status
+            </h3>
+            <div className="relative w-full">
+              <button
+                onClick={() =>
+                  setVerificationStatusOpen(!verificationStatusOpen)
+                }
+                className="w-full p-2 bg-white border border-[#B5B1B1] rounded-[8px] flex items-center justify-between text-sm font-normal hover:border-gray-400 transition-colors"
+                type="button"
+              >
+                <span
+                  className={selectedVerificationStatus ? "" : "text-[#757575]"}
+                >
+                  {selectedVerificationStatus
+                    ? verificationOptionsMap.find(
+                        (o) => o.value === selectedVerificationStatus
+                      )?.label
+                    : "Select Status"}
+                </span>
+                <ChevronUp
+                  className={`w-5 h-5 transition-transform duration-200 ${
+                    verificationStatusOpen ? "" : "rotate-180"
+                  }`}
+                />
+              </button>
+
+              {verificationStatusOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-[#E5E5E5] rounded-[8px] overflow-hidden shadow-lg z-10">
+                  {verificationOptionsMap.map((option, index) => (
+                    <button
+                      key={option.value}
+                      onClick={() =>
+                        handleVerificationStatusSelect(option.value)
+                      }
+                      className={`w-full px-2 h-[38px] flex items-center gap-2 text-left hover:bg-gray-50 transition-colors ${
+                        index !== verificationOptionsMap.length - 1
+                          ? "border-b border-[#E5E5E5]"
+                          : ""
+                      }`}
+                      type="button"
+                    >
+                      <div
+                        className={`w-4 h-4 border flex items-center justify-center rounded-[4px] transition-colors ${
+                          selectedVerificationStatus === option.value
+                            ? "bg-[#04171F] border-[#04171F]"
+                            : "border-[#757575] bg-white"
+                        }`}
+                      >
+                        {selectedVerificationStatus === option.value && (
                           <Check className="w-3 h-3 text-white" />
                         )}
                       </div>
@@ -277,4 +363,4 @@ const BuyerFilters: React.FC<BuyerFiltersProps> = ({ onApplyFilter }) => {
   );
 };
 
-export default BuyerFilters;
+export default SellerFilters;
