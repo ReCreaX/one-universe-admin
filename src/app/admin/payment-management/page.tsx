@@ -1,75 +1,120 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { HiOutlineLogout } from "react-icons/hi";
-import React from "react";
-import { ListFilter, Search } from "lucide-react";
+import PaymentTable from "./PaymentTable";
 import EmptyPaymentManagement from "./EmptyPaymentManagement";
 import NoPaymentManagement from "./NoPaymentManagement";
 
+type Payment = {
+  id: string;
+  serviceTitle: string;
+  buyer: string;
+  seller: string;
+  totalAmount: string;
+  status: "PAID" | "PENDING" | "DISPUTED" | "PENDING REFUND" | "REFUNDED";
+  date: string;
+};
+
 const PaymentManagementPage = () => {
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    // Sample payment data
+    setPayments([
+      {
+        id: "PAY-001",
+        serviceTitle: "Website Development",
+        buyer: "Jane Adebayo",
+        seller: "Ayo Tech",
+        totalAmount: "₦50,000",
+        status: "PAID",
+        date: "Nov 22, 2025",
+      },
+      {
+        id: "PAY-002",
+        serviceTitle: "Mobile App Design",
+        buyer: "John Doe",
+        seller: "Tech Labs",
+        totalAmount: "₦75,000",
+        status: "PENDING",
+        date: "Nov 20, 2025",
+      },
+      {
+        id: "PAY-003",
+        serviceTitle: "Logo Design",
+        buyer: "Alice Smith",
+        seller: "Creative Studio",
+        totalAmount: "₦20,000",
+        status: "DISPUTED",
+        date: "Nov 18, 2025",
+      },
+      {
+        id: "PAY-004",
+        serviceTitle: "SEO Optimization",
+        buyer: "Bob Johnson",
+        seller: "SEO Experts",
+        totalAmount: "₦40,000",
+        status: "PENDING REFUND",
+        date: "Nov 15, 2025",
+      },
+      {
+        id: "PAY-005",
+        serviceTitle: "Content Writing",
+        buyer: "Eva Green",
+        seller: "Content Hub",
+        totalAmount: "₦10,000",
+        status: "REFUNDED",
+        date: "Nov 10, 2025",
+      },
+    ]);
+  }, []);
+
+  // Filter payments based on search query
+  const filteredPayments = payments.filter(
+    (p) =>
+      p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.buyer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.seller.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.serviceTitle.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Determine what to render
+  let content;
+  if (payments.length === 0) content = <EmptyPaymentManagement />;
+  else if (filteredPayments.length === 0) content = <NoPaymentManagement />;
+  else content = <PaymentTable data={filteredPayments} />;
+
   return (
-    <section className="">
-      <section className=" flex flex-col justify-between md:flex-row gap-[16px]">
-        <section className="flex flex-col  gap-2">
-          <h3 className="text-[#171417] font-bold text-[1.5rem] sm:text-[1.25rem] leading-[120%]">
+    <section className="p-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-[#171417]">
             Payment Management
-          </h3>
-          <p className="text-[#6B6969] text-[1rem] sm:text-[.875rem] leading-[140%]">
+          </h1>
+          <p className="text-[#6B6969]">
             Oversee all payouts and refunds to ensure sellers are paid
           </p>
-        </section>
-        <div className="flex items-center justify-end">
-          <button
-            className="[background:var(--primary-radial)] px-[24px]  w-full md:w-fit flex items-center justify-center gap-[16px] text-[#FDFDFD] h-[46px] rounded-[20px] cursor-pointer"
-            type="button"
-          >
-            <p className="">Export</p>
-            <HiOutlineLogout size={16} />
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-3 mt-3 md:mt-0">
+          <input
+            type="text"
+            placeholder="Search by Payment ID, Buyer/Seller Name, or Service Title..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="border border-[#B7B6B7] rounded-md px-4 py-2 w-full md:w-[400px] outline-none text-sm"
+          />
+          <button className="flex items-center gap-2 bg-[#007BFF] text-white px-4 py-2 rounded-md">
+            Export <HiOutlineLogout size={16} />
           </button>
         </div>
-      </section>
-      <section className="my-[30px] md:px-[15px]">
-        <section className="pb-3">
-          <h3 className="text-[#171417] font-medium text-[1.25rem] leading-[140%] mb-[20px]">
-            Payment Records
-          </h3>
-          <aside className="flex items-center justify-between gap-[24px]">
-            <div className="border border-[#B7B6B7] relative w-[532px] rounded-[8px]">
-              <input
-                type="text"
-                placeholder="Search by Payment ID, Buyer/Seller Name, or Service Title..."
-                className="w-full h-[46px] pl-[40px] pr-[16px] rounded-[8px] outline-none text-[#7B7B7B] placeholder:text-[#6B6969] placeholder:text-[.75rem] text-[.75rem] md:text-[1rem] leading-[140%] font-normal"
-              />
-              <Search
-                size={16}
-                className="text-[#6B6969] absolute left-4 top-4"
-              />
-            </div>
-            <div className="">
-              <button
-                className="border border-[#B7B6B7] flex items-center h-[46px] md:h-[38px] px-[8px] rounded-[8px] gap-2 cursor-pointer"
-                type="button"
-              >
-                <ListFilter size={16} />
-                <span className="md:block hidden text-[#171417] text-[1rem] leading-[140%]">
-                  Filter
-                </span>
-              </button>
-            </div>
-          </aside>
-        </section>
+      </div>
 
-        <hr />
-
-        <section className="mt-4 py-10">
-          {/* <EmptyPaymentManagement /> */}
-          <NoPaymentManagement />
-          {/* <NoResultDispute /> */}
-          {/* <DisputeTable /> */}
-        </section>
-
-        <section className="mt-8 mb-[50px] w- flex items-center justify-center">
-          {/* <Pagination totalPages={30} /> */}
-        </section>
-      </section>
+      {/* Table / Empty States */}
+      <div>{content}</div>
     </section>
   );
 };
