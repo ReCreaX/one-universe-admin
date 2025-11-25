@@ -9,20 +9,52 @@ import {
   MoveUp,
   Search,
 } from "lucide-react";
-import EmptyService from "../components/EmptyService";
-import { services } from "../utils/service";
 import EmptyApprovedService from "../components/empty-service/EmptyApprovedService";
 import EmptyRejectedService from "../components/empty-service/EmptyRejectedService";
 import EmptyPendingService from "../components/empty-service/EmptyPendingService";
 
 type ServiceStatus = "Pending" | "Approved" | "Rejected";
 
+interface Service {
+  title: string;
+  createdAt: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  sellerProfiles: { name?: string }[];
+}
+
 const ServiceManagementPage = () => {
   const [activeTab, setActiveTab] = useState<ServiceStatus>("Pending");
+  const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [expandedService, setExpandedService] = useState<string | null>(null);
   const [showFilter, setShowFilter] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+
+  // Fetch services from API
+  useEffect(() => {
+    const fetchServices = async () => {
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      if (!token) return;
+
+      try {
+        const res = await fetch(
+          "https://one-universe-de5673cf0d65.herokuapp.com/api/v1/master-services",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        const data = await res.json();
+        setServices(data);
+      } catch (err) {
+        console.error("Failed to fetch services:", err);
+      }
+    };
+
+    fetchServices();
+  }, []);
 
   // Detect click outside to close filter
   useEffect(() => {
@@ -45,11 +77,11 @@ const ServiceManagementPage = () => {
   };
 
   const toggleAllServices = () => {
-    const filteredServices = services.filter((s) => s.status === activeTab);
-    if (selectedServices.length === filteredServices.length) {
+    const filtered = filteredServices;
+    if (selectedServices.length === filtered.length) {
       setSelectedServices([]);
     } else {
-      setSelectedServices(filteredServices.map((s) => s.id));
+      setSelectedServices(filtered.map((_, idx) => String(idx)));
     }
   };
 
@@ -80,10 +112,22 @@ const ServiceManagementPage = () => {
   };
 
   const getServiceCount = (status: ServiceStatus) => {
-    return services.filter((s) => s.status === status).length;
+    const statusMap = {
+      Pending: "PENDING",
+      Approved: "APPROVED",
+      Rejected: "REJECTED",
+    };
+    return services.filter((s) => s.status === statusMap[status]).length;
   };
 
-  const filteredServices = services.filter((s) => s.status === activeTab);
+  const filteredServices = services.filter((s) => {
+    const statusMap = {
+      Pending: "PENDING",
+      Approved: "APPROVED",
+      Rejected: "REJECTED",
+    };
+    return s.status === statusMap[activeTab];
+  });
 
   const stats = [
     {
@@ -171,7 +215,7 @@ const ServiceManagementPage = () => {
             Service Requests
           </h3>
 
-          {/* Custom Tabs */}
+          {/* Tabs */}
           <div className="flex items-center gap-0 mb-6 overflow-x-auto">
             {(["Pending", "Approved", "Rejected"] as ServiceStatus[]).map(
               (tab) => {
@@ -197,7 +241,7 @@ const ServiceManagementPage = () => {
             )}
           </div>
 
-          {/* Search and Filter */}
+          {/* Search & Filter */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
             <div className="flex-1 relative max-w-xl">
               <input
@@ -233,9 +277,8 @@ const ServiceManagementPage = () => {
           </div>
         )}
 
-        {/* Table Section */}
+        {/* Table / Mobile List */}
         {filteredServices.length === 0 ? (
-          // <EmptyService />
           <>
             {activeTab === "Pending" && <EmptyPendingService />}
             {activeTab === "Approved" && <EmptyApprovedService />}
@@ -277,140 +320,145 @@ const ServiceManagementPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredServices.map((service) => (
-                    <tr
-                      key={service.id}
-                      className="border-b border-gray-100 hover:bg-gray-50"
-                    >
-                      <td className="py-4 px-6">
-                        <input
-                          type="checkbox"
-                          checked={selectedServices.includes(service.id)}
-                          onChange={() => toggleService(service.id)}
-                          className="w-5 h-5 rounded border-gray-300 cursor-pointer"
-                        />
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-10 h-10 rounded-full ${getAvatarColor(
-                              service.sellerName
-                            )} flex items-center justify-center text-white text-sm font-medium`}
-                          >
-                            {getInitials(service.sellerName)}
+                  {filteredServices.map((service, idx) => {
+                    const sellerName =
+                      service.sellerProfiles.length > 0
+                        ? service.sellerProfiles[0].name || "Admin"
+                        : "Admin";
+
+                    return (
+                      <tr
+                        key={idx}
+                        className="border-b border-gray-100 hover:bg-gray-50"
+                      >
+                        <td className="py-4 px-6">
+                          <input
+                            type="checkbox"
+                            checked={selectedServices.includes(String(idx))}
+                            onChange={() => toggleService(String(idx))}
+                            className="w-5 h-5 rounded border-gray-300 cursor-pointer"
+                          />
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-10 h-10 rounded-full ${getAvatarColor(
+                                sellerName
+                              )} flex items-center justify-center text-white text-sm font-medium`}
+                            >
+                              {getInitials(sellerName)}
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">
+                              {sellerName}
+                            </span>
                           </div>
-                          <span className="text-sm font-medium text-gray-900">
-                            {service.sellerName}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6 text-sm text-gray-900">
-                        {service.title}
-                      </td>
-                      <td className="py-4 px-6 text-sm text-gray-900">
-                        {typeof service.createdAt === "string"
-                          ? service.createdAt
-                          : service.createdAt.toLocaleDateString()}
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full">
-                          <Clock size={14} className="text-gray-600" />
-                          <span className="text-sm text-gray-700">
-                            {service.status}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-2">
-                          <button className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors">
-                            <Check size={16} />
-                            Approve
-                          </button>
-                          <button className="inline-flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors">
-                            <X size={16} />
-                            Reject
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-4 px-6 text-sm text-gray-900">
+                          {service.title}
+                        </td>
+                        <td className="py-4 px-6 text-sm text-gray-900">
+                          {new Date(service.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full">
+                            <Clock size={14} className="text-gray-600" />
+                            <span className="text-sm text-gray-700">
+                              {service.status}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-2">
+                            <button className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors">
+                              <Check size={16} />
+                              Approve
+                            </button>
+                            <button className="inline-flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors">
+                              <X size={16} />
+                              Reject
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Mobile List */}
             <div className="md:hidden p-4 space-y-3">
-              {filteredServices.map((service) => (
-                <div key={service.id}>
-                  <div
-                    className={`border rounded-lg transition-all ${
-                      expandedService === service.id
-                        ? "border-gray-300 shadow-sm"
-                        : "border-gray-200"
-                    }`}
-                  >
+              {filteredServices.map((service, idx) => {
+                const sellerName =
+                  service.sellerProfiles.length > 0
+                    ? service.sellerProfiles[0].name || "Unknown Seller"
+                    : "Unknown Seller";
+
+                return (
+                  <div key={idx}>
                     <div
-                      className="flex items-center gap-3 p-4 cursor-pointer"
-                      onClick={() => toggleExpand(service.id)}
+                      className={`border rounded-lg transition-all ${
+                        expandedService === String(idx)
+                          ? "border-gray-300 shadow-sm"
+                          : "border-gray-200"
+                      }`}
                     >
                       <div
-                        className={`w-10 h-10 rounded-full ${getAvatarColor(
-                          service.sellerName
-                        )} flex items-center justify-center text-white text-sm font-medium flex-shrink-0`}
+                        className="flex items-center gap-3 p-4 cursor-pointer"
+                        onClick={() => toggleExpand(String(idx))}
                       >
-                        {getInitials(service.sellerName)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-medium text-gray-900 truncate">
-                          {service.sellerName}
-                        </h3>
-                        <p className="text-sm text-gray-600 truncate">
-                          {service.title}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-full">
-                          <Clock size={12} className="text-gray-600" />
-                          <span className="text-xs text-gray-700">
-                            {service.status}
-                          </span>
+                        <div
+                          className={`w-10 h-10 rounded-full ${getAvatarColor(
+                            sellerName
+                          )} flex items-center justify-center text-white text-sm font-medium flex-shrink-0`}
+                        >
+                          {getInitials(sellerName)}
                         </div>
-                        <ChevronDown
-                          size={20}
-                          className={`text-gray-400 transition-transform ${
-                            expandedService === service.id ? "rotate-180" : ""
-                          }`}
-                        />
-                      </div>
-                    </div>
-
-                    {expandedService === service.id && (
-                      <div className="px-4 pb-4 space-y-3 border-t border-gray-100">
-                        <div className="pt-3">
-                          <p className="text-xs text-gray-600 mb-1">
-                            <p className="text-sm font-medium text-gray-900">
-                              {typeof service.createdAt === "string"
-                                ? service.createdAt
-                                : service.createdAt.toLocaleDateString()}
-                            </p>
-                            {typeof service.createdAt === "string"
-                              ? service.createdAt
-                              : service.createdAt.toLocaleDateString()}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-gray-900 truncate">
+                            {sellerName}
+                          </h3>
+                          <p className="text-sm text-gray-600 truncate">
+                            {service.title}
                           </p>
                         </div>
-                        <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors">
-                          <Check size={16} />
-                          Approve
-                        </button>
-                        <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors">
-                          <X size={16} />
-                          Reject
-                        </button>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-full">
+                            <Clock size={12} className="text-gray-600" />
+                            <span className="text-xs text-gray-700">
+                              {service.status}
+                            </span>
+                          </div>
+                          <ChevronDown
+                            size={20}
+                            className={`text-gray-400 transition-transform ${
+                              expandedService === String(idx)
+                                ? "rotate-180"
+                                : ""
+                            }`}
+                          />
+                        </div>
                       </div>
-                    )}
+
+                      {expandedService === String(idx) && (
+                        <div className="px-4 pb-4 space-y-3 border-t border-gray-100">
+                          <p className="text-sm font-medium text-gray-900">
+                            {new Date(service.createdAt).toLocaleDateString()}
+                          </p>
+                          <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors">
+                            <Check size={16} />
+                            Approve
+                          </button>
+                          <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors">
+                            <X size={16} />
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}

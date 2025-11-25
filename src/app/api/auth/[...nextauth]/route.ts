@@ -1,37 +1,53 @@
-import NextAuth, { NextAuthOptions, User } from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import getBaseUrl from "@/services/baseUrl";
 
 const baseUrl = getBaseUrl("live");
 
-// Refresh token helper
+// --- Refresh token helper ---
 async function refreshAccessToken(token: any): Promise<any> {
   try {
+    if (!token.refreshToken) {
+      console.error("❌ No refresh token available in token object");
+      throw new Error("No refresh token");
+    }
+
     console.log("🔄 Attempting to refresh token...");
-    
+    console.log("🔑 Refresh token:", token.refreshToken.substring(0, 20) + "...");
+
+    // Your backend expects the refresh token in a cookie named 'refresh_token'
     const res = await fetch(`${baseUrl}/auth/refresh-token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken: token.refreshToken }),
+      method: "PATCH",
+      headers: { 
+        "Content-Type": "application/json",
+        "Cookie": `refresh_token=${token.refreshToken}` // Send as cookie
+      },
     });
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseError) {
+      console.error("❌ Failed to parse refresh response:", parseError);
+      throw new Error("Invalid response from refresh endpoint");
+    }
 
     if (!res.ok) {
-      console.error("❌ Refresh failed:", data.message);
-      throw new Error(data.message || "Refresh token failed");
+      console.error("❌ Refresh failed with status:", res.status);
+      console.error("❌ Response data:", data);
+      throw new Error(data.message || `Refresh failed with status ${res.status}`);
     }
 
     console.log("✅ Token refreshed successfully");
 
     return {
       ...token,
-      accessToken: data.accessToken, // Backend returns at root level
+      accessToken: data.accessToken,
       refreshToken: data.refreshToken || token.refreshToken,
       accessTokenExpires: Date.now() + 5 * 60 * 1000, // 5 min
-      error: undefined, // Clear any previous errors
+      error: undefined,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Refresh token error:", error);
     return {
       ...token,
@@ -40,22 +56,28 @@ async function refreshAccessToken(token: any): Promise<any> {
   }
 }
 
+// --- NextAuth options ---
 export const authOptions: NextAuthOptions = {
-  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   providers: [
     CredentialsProvider({
       name: "Credentials",
-      credentials: { email: {}, password: {} },
+      credentials: { 
+        email: { label: "Email", type: "email" }, 
+        password: { label: "Password", type: "password" } 
+      },
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) {
-          console.log("❌ Missing credentials");
+          console.error("❌ Missing credentials");
           return null;
         }
 
         try {
-          console.log("🔐 Attempting login for:", credentials.email);
-          
-          // Only send email and password to backend, not the extra NextAuth properties
+          console.log("🔐 Logging in:", credentials.email);
+
           const res = await fetch(`${baseUrl}/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -69,70 +91,116 @@ export const authOptions: NextAuthOptions = {
 
           if (!res.ok) {
             console.error("❌ Login failed:", data.message);
-            throw new Error(data.message || "Login failed");
+            return null;
           }
 
-          console.log("✅ Login successful for:", credentials.email);
+          console.log("✅ Login successful for:", data.user?.email);
+          console.log("🔑 Tokens received:");
+          console.log("   - Access Token:", data.accessToken?.substring(0, 20) + "...");
+          console.log("   - Refresh Token:", data.refreshToken?.substring(0, 20) + "...");
 
           return {
-            id: data.user?.id,
-            email: data.user?.email,
-            name: data.user?.name,
-            accessToken: data.tokens?.accessToken,
-            refreshToken: data.tokens?.refreshToken,
-          } as User;
-        } catch (error: any) {
-          console.error("❌ Authorization error:", error.message);
-          throw error;
+            id: data.user?.id || "",
+            email: data.user?.email || "",
+            name: data.user?.fullName || "",
+            accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
+          } as any;
+        } catch (err: any) {
+          console.error("❌ Authorization error:", err.message);
+          return null;
         }
       },
     }),
   ],
 
   callbacks: {
+    // --- JWT callback ---
     async jwt({ token, user, trigger }) {
-      // Initial sign in
+      console.log("🎫 JWT Callback triggered:", { trigger, hasUser: !!user });
+      
+      // Initial sign-in
       if (user) {
-        console.log("👤 New user login, setting initial token");
+        console.log("🆕 Initial sign-in - setting up token");
+        
+        const userWithTokens = user as any;
+        
+        if (!userWithTokens.accessToken || !userWithTokens.refreshToken) {
+          console.error("❌ User object missing tokens!");
+          return {
+            ...token,
+            error: "MissingTokensFromAuthorize",
+          };
+        }
+
         return {
           ...token,
-          accessToken: user.accessToken!,
-          refreshToken: user.refreshToken!,
-          id: user.id!,
-          accessTokenExpires: Date.now() + 5 * 60 * 1000, // 5 min
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          accessToken: userWithTokens.accessToken,
+          refreshToken: userWithTokens.refreshToken,
+          accessTokenExpires: Date.now() + 15 * 60 * 1000, // 15 min (matches your JWT expiry)
           error: undefined,
         };
       }
 
-      // Return previous token if the access token has not expired yet
+      // Check if tokens exist
+      if (!token.accessToken || !token.refreshToken) {
+        console.error("❌ Missing tokens in JWT callback");
+        return {
+          ...token,
+          error: "MissingTokens",
+        };
+      }
+
+      // Token still valid
       if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
-        console.log("✓ Token still valid");
+        console.log("✅ Token still valid, expires in:", 
+          Math.floor((token.accessTokenExpires - Date.now()) / 1000), "seconds"
+        );
         return token;
       }
 
-      // Access token has expired, try to refresh it
+      // Token expired → refresh
       console.log("⚠️ Token expired, refreshing...");
       return refreshAccessToken(token);
     },
 
+    // --- Session callback ---
     async session({ session, token }) {
+      console.log("📋 Session callback:", {
+        hasAccessToken: !!token.accessToken,
+        hasRefreshToken: !!token.refreshToken,
+        hasError: !!token.error,
+      });
+
       session.user = session.user || {};
-      session.user.id = token.id!;
-      session.accessToken = token.accessToken!;
-      session.refreshToken = token.refreshToken!;
+      session.user.id = token.id as string;
+      session.user.email = token.email as string;
+      session.user.name = token.name as string;
+      session.accessToken = token.accessToken as string;
+      session.refreshToken = token.refreshToken as string;
       session.error = token.error;
-      
+
       if (token.error) {
         console.warn("⚠️ Session has error:", token.error);
       }
-      
+
       return session;
     },
   },
 
-  pages: { signIn: "/auth/sign-in", error: "/auth/sign-in" },
+  pages: {
+    signIn: "/auth/sign-in",
+    error: "/auth/sign-in",
+  },
+
   secret: process.env.NEXTAUTH_SECRET,
+  
+  debug: process.env.NODE_ENV === "development",
 };
 
+// --- Export handler for Next.js API routes ---
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };

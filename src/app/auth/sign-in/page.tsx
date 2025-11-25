@@ -1,19 +1,18 @@
 "use client";
 
-import authService from "@/services/authService";
-import useToastStore from "@/store/useToastStore";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession, getSession } from "next-auth/react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import React, { useEffect, useRef, useState } from "react";
+import useToastStore from "@/store/useToastStore";
 
 const SignInPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToastStore();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -26,13 +25,21 @@ const SignInPage = () => {
 
   const resetTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Clear any broken sessions on mount
+  useEffect(() => {
+    if (session?.error) {
+      console.log("🔄 Clearing broken session...");
+      signOut({ redirect: false });
+    }
+  }, [session]);
+
   // Redirect immediately if already logged in
   useEffect(() => {
-    if (session?.user) {
+    if (status === "authenticated" && session?.user && !session?.error) {
       const callbackUrl = searchParams.get("callbackUrl") || "/admin";
       router.replace(callbackUrl);
     }
-  }, [session, router, searchParams]);
+  }, [session, status, router, searchParams]);
 
   // Load lock state from localStorage
   useEffect(() => {
@@ -85,18 +92,6 @@ const SignInPage = () => {
     }, 2 * 60 * 1000);
   };
 
-  // Handle smooth redirect after login
-  const handleLoginRedirect = async (url: string) => {
-    let retries = 0;
-    let currentSession = await getSession();
-    while (!currentSession?.user && retries < 5) {
-      await new Promise((r) => setTimeout(r, 300));
-      currentSession = await getSession();
-      retries++;
-    }
-    router.replace(url);
-  };
-
   // Form submission
   const handleAdminLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -115,21 +110,26 @@ const SignInPage = () => {
     setIsLoading(true);
 
     try {
-      const response = await authService.signin({ email, password });
-      console.log("🔍 Sign-in response:", response);
+      // Clear any existing session first
+      await signOut({ redirect: false });
+      
+      // Wait a bit for the session to clear
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
-      if (response.success && response.url) {
-        showToast("success", "Login Successful", "Redirecting...", 3000);
-        resetLoginAttempts();
+      const result = await signIn("credentials", {
+        redirect: false,
+        email,
+        password,
+      });
 
-        const callbackUrl =
-          searchParams.get("callbackUrl") || response.url || "/admin";
-        await handleLoginRedirect(callbackUrl);
-      } else if (response.error) {
+      console.log("🔍 Sign-in result:", result);
+
+      if (result?.error) {
+        // Login failed
         showToast(
           "error",
           "Invalid email or password",
-          response.message || "Please try again",
+          result.error || "Please try again",
           5000
         );
 
@@ -144,11 +144,21 @@ const SignInPage = () => {
         });
 
         startResetTimer();
+      } else if (result?.ok) {
+        // Login successful
+        showToast("success", "Login Successful", "Redirecting...", 3000);
+        resetLoginAttempts();
+
+        // Wait for session to be established
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        const callbackUrl = searchParams.get("callbackUrl") || "/admin";
+        router.replace(callbackUrl);
       }
     } catch (error) {
       setLoginAttempts((prev) => prev + 1);
       startResetTimer();
-      console.error("🔍 Full error:", error);
+      console.error("🔍 Login error:", error);
       showToast(
         "error",
         "Login Failed",
@@ -172,8 +182,17 @@ const SignInPage = () => {
     };
   }, []);
 
-  // If user is already logged in, render nothing (or a loading indicator)
-  if (session?.user) return null;
+  // Show loading while checking session
+  if (status === "loading") {
+    return (
+      <section className="flex items-center justify-center h-full">
+        <div>Loading...</div>
+      </section>
+    );
+  }
+
+  // If user is already logged in and has valid session, render nothing
+  if (status === "authenticated" && !session?.error) return null;
 
   return (
     <section className="flex items-center justify-center h-full md:px-6 px-1 py-8">

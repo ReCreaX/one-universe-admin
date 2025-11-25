@@ -4,103 +4,43 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { FaCheck, FaUserCircle } from "react-icons/fa";
-import UserManagementStatusBadge from "../../UserManagementStatusBadge";
 import { X } from "lucide-react";
+import UserManagementStatusBadge from "../../UserManagementStatusBadge";
 import { userManagementStore, UserType } from "@/store/userManagementStore";
-import { formatDate, getRandomDate } from "@/utils/formatTime";
+import { formatDate } from "@/utils/formatTime";
 import { useEffect, useState } from "react";
 import axios from "axios";
-
-const API_TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjNmQwODkzYS03NTFiLTQ3NjQtYjU5MC05Y2UyMDk4Y2JhMjUiLCJlbWFpbCI6ImluZm9Ab25ldW5pdmVyc2UubmciLCJyb2xlcyI6WyJTVVBFUl9BRE1JTiJdLCJpYXQiOjE3NjMwNDMwMjksImV4cCI6MTc2MzA0MzkyOX0.QzTNlJwyv5PVR7AaTOsdT121vtmvR8fkIYOvx3bjzo8";
-
-// const users: UserType[] = [
-//   {
-//     name: "Chuka Nwosu",
-//     email: "bill.sandra@gmail.com",
-//     phone: "+2348484884848",
-//     status: "Active",
-//     createdAt: getRandomDate(new Date(2025, 0, 1), new Date(2025, 9, 30)),
-//     updatedAt: getRandomDate(new Date(2025, 0, 1), new Date(2025, 9, 30)),
-//     avatar: "/avatars/avatar1.png",
-//     isVerified: true,
-//   },
-//   {
-//     name: "Chuka Nwosu",
-//     email: "bill.sandra@gmail.com",
-//     phone: "+2348484884848",
-//     status: "Inactive",
-//     createdAt: getRandomDate(new Date(2025, 0, 1), new Date(2025, 9, 30)),
-//     updatedAt: getRandomDate(new Date(2025, 0, 1), new Date(2025, 9, 30)),
-//     avatar: "/avatars/avatar1.png",
-//     isVerified: false,
-//   },
-//   {
-//     name: "Chuka Nwosu",
-//     email: "bill.sandra@gmail.com",
-//     phone: "+2348484884848",
-//     status: "Active",
-//     createdAt: getRandomDate(new Date(2025, 0, 1), new Date(2025, 9, 30)),
-//     updatedAt: getRandomDate(new Date(2025, 0, 1), new Date(2025, 9, 30)),
-//     avatar: "/avatars/avatar1.png",
-//     isVerified: true,
-//   },
-//   {
-//     name: "Chuka Nwosu",
-//     email: "bill.sandra@gmail.com",
-//     phone: "+2348484884848",
-//     status: "Pending",
-//     createdAt: getRandomDate(new Date(2025, 0, 1), new Date(2025, 9, 30)),
-//     updatedAt: getRandomDate(new Date(2025, 0, 1), new Date(2025, 9, 30)),
-//     avatar: "/avatars/avatar1.png",
-//     isVerified: false,
-//   },
-//   {
-//     name: "Chuka Nwosu",
-//     email: "bill.sandra@gmail.com",
-//     phone: "+2348484884848",
-//     status: "Pending",
-//     createdAt: getRandomDate(new Date(2025, 0, 1), new Date(2025, 9, 30)),
-//     updatedAt: getRandomDate(new Date(2025, 0, 1), new Date(2025, 9, 30)),
-//     avatar: "/avatars/avatar1.png",
-//     isVerified: false,
-//   },
-//   {
-//     name: "Chuka Nwosu",
-//     email: "bill.sandra@gmail.com",
-//     phone: "+2348484884848",
-//     status: "Active",
-//     createdAt: getRandomDate(new Date(2025, 0, 1), new Date(2025, 9, 30)),
-//     updatedAt: getRandomDate(new Date(2025, 0, 1), new Date(2025, 9, 30)),
-//     avatar: "/avatars/avatar1.png",
-//     isVerified: true,
-//   },
-// ];
+import { useSession } from "next-auth/react";
 
 const SellersTable = () => {
   const { openModal } = userManagementStore();
+  const { data: session } = useSession();
+
   const handleSelectUser = (user: UserType) => {
-    console.log("Selected User:", user);
     openModal("openSeller", user);
   };
+
   const [user, setUser] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!session?.accessToken) return;
+
     const fetchUsers = async () => {
       try {
         setLoading(true);
         setError(null);
+
         const response = await axios.get(
           "https://one-universe-de5673cf0d65.herokuapp.com/api/v1/admin/sellers",
           {
             headers: {
-              Authorization: `Bearer ${API_TOKEN}`,
+              Authorization: `Bearer ${session.accessToken}`,
             },
           }
         );
-        console.log("Fetched Users:", response.data.data);
+
         setUser(response.data.data);
       } catch (error: any) {
         console.error("Error fetching users:", error);
@@ -117,7 +57,15 @@ const SellersTable = () => {
     };
 
     fetchUsers();
-  }, []);
+  }, [session?.accessToken]);
+
+  if (!session?.accessToken) {
+    return (
+      <div className="w-full flex items-center justify-center py-8">
+        <p className="text-gray-500">Authenticating... Please wait.</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -142,19 +90,18 @@ const SellersTable = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="w-full">
       {/* Desktop Table */}
-      <div className="hidden md:block  overflow-hidden ">
+      <div className="hidden md:block overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-[#FFFCFC] text-[#646264] text-left  border-b border-[#E5E5E5] h-[60px]">
+          <thead className="bg-[#FFFCFC] text-[#646264] text-left border-b border-[#E5E5E5] h-[60px]">
             <tr>
               <th className="py-3 px-4 font-medium">
                 <div className="flex items-center gap-2">
                   <FaUserCircle size={18} />
-
-                  <p className="">Full Name</p>
+                  <p>Full Name</p>
                 </div>
               </th>
               <th className="py-3 px-4 font-medium">Email Address</th>
@@ -164,28 +111,40 @@ const SellersTable = () => {
               <th className="py-3 px-4 font-medium">Time</th>
             </tr>
           </thead>
+
           <tbody className="text-[#303237]">
             {user.map((item) => (
               <tr
                 key={item.id}
                 className={cn(
-                  "border-t border-gray-100 hover:bg-gray-50 transition h-[60px]"
+                  "border-t border-gray-100 hover:bg-gray-50 transition h-[60px] cursor-pointer"
                 )}
                 onClick={() => handleSelectUser(item)}
               >
-                <td className="py-3 px-4  gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="relative size-6 rounded-full overflow-hidden">
-                      <Image
-                        src="/images/user.png"
-                        alt={item.fullName}
-                        fill
-                        className="object-cover"
-                      />
+                <td className="py-3 px-4 gap-3">
+                  <div className="flex items-center gap-2 relative group">
+                    {/* Avatar */}
+                    <div className="relative size-6 rounded-full overflow-hidden bg-gray-200">
+                      {item.avatar ? (
+                        <Image
+                          src={item.avatar}
+                          alt={item.fullName}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <FaUserCircle className="text-gray-400" size={24} />
+                        </div>
+                      )}
                     </div>
+
+                    {/* Full Name */}
                     <p className="font-medium text-gray-900 hover:underline cursor-pointer">
                       {item.fullName}
                     </p>
+
+                    {/* Small Badge (Always Visible) */}
                     {item.isVerified ? (
                       <div className="bg-[#1FC16B] size-[17px] rounded-full flex items-center justify-center">
                         <FaCheck className="text-white" size={12} />
@@ -195,19 +154,39 @@ const SellersTable = () => {
                         <X className="text-white" size={12} />
                       </div>
                     )}
+
+                    {/* Hover Tooltip */}
+                    <div className="absolute left-0 top-8 z-50 hidden group-hover:flex items-center gap-2 bg-white border border-gray-200 shadow-md rounded-[8px] p-[8px] w-[258px] h-[50px]">
+                      {item.isVerified ? (
+                        <div className="bg-[#1FC16B] w-[20px] h-[20px] rounded-full flex items-center justify-center">
+                          <FaCheck className="text-white" size={12} />
+                        </div>
+                      ) : (
+                        <div className="bg-[#D00416] w-[20px] h-[20px] rounded-full flex items-center justify-center">
+                          <X className="text-white" size={12} />
+                        </div>
+                      )}
+
+                      <p className="text-[13px] text-gray-800 leading-tight">
+                        {item.isVerified
+                          ? "Seller account information have been verified"
+                          : "Seller account is not verified"}
+                      </p>
+                    </div>
                   </div>
                 </td>
-                <td className="py-3 px-4 text-[#303237]">{item.email}</td>
-                <td className="py-3 px-4 text-[#454345]">{item.phone}</td>
+
+                <td className="py-3 px-4">{item.email}</td>
+                <td className="py-3 px-4">{item.phone}</td>
                 <td className="py-3 px-4">
                   <UserManagementStatusBadge status={item.status} />
                 </td>
-                <td className="py-3 px-4 text-[#303237]">
+                <td className="py-3 px-4">
                   {item.createdAt
                     ? formatDate(new Date(item.createdAt)).date
                     : "N/A"}
                 </td>
-                <td className="py-3 px-4 text-[#303237]">
+                <td className="py-3 px-4">
                   {item.createdAt
                     ? formatDate(new Date(item.createdAt)).time
                     : "N/A"}
@@ -223,17 +202,25 @@ const SellersTable = () => {
         {user.map((item) => (
           <div
             key={item.id}
-            className="flex items-center justify-between border border-gray-200 rounded-2xl p-4 bg-white shadow-sm"
+            className="flex items-center justify-between border border-gray-200 rounded-2xl p-4 bg-white shadow-sm cursor-pointer"
+            onClick={() => handleSelectUser(item)}
           >
             <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 rounded-full overflow-hidden">
-                <Image
-                  src="/images/user.png"
-                  alt={item.fullName}
-                  fill
-                  className="object-cover"
-                />
+              <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-200">
+                {item.avatar ? (
+                  <Image
+                    src={item.avatar}
+                    alt={item.fullName}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <FaUserCircle className="text-gray-400" size={40} />
+                  </div>
+                )}
               </div>
+
               <div>
                 <p className="font-semibold text-gray-900">{item.fullName}</p>
                 <p className="text-sm text-gray-500">
@@ -253,11 +240,3 @@ const SellersTable = () => {
 };
 
 export default SellersTable;
-
-const SellerVerificationToolTip = () => {
-  return (
-    <section className="">
-      <div className=""></div>
-    </section>
-  );
-};

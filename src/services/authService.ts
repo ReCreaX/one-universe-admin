@@ -1,4 +1,4 @@
-import { signIn } from "next-auth/react";
+import { signIn, signOut, getSession } from "next-auth/react";
 
 interface SignInCredentials {
   email: string;
@@ -10,54 +10,72 @@ interface SignInResponse {
   url?: string;
   error?: boolean;
   message?: string;
+  accessToken?: string;
+  refreshToken?: string;
+}
+
+interface SignOutResponse {
+  success: boolean;
+  message?: string;
 }
 
 const authService = {
-  async signin(credentials: SignInCredentials): Promise<SignInResponse> {
+  async signin(credentials: { email: string; password: string }): Promise<SignInResponse> {
     try {
-      console.log("🔐 Attempting sign in with NextAuth...");
-
       const result = await signIn("credentials", {
-        redirect: false, // Don't redirect automatically
+        redirect: false,
         email: credentials.email,
         password: credentials.password,
       });
 
-      console.log("📝 Sign in result:", result);
-      console.log("📝 Result status:", result?.status);
-      console.log("📝 Result ok:", result?.ok);
-      console.log("📝 Result error:", result?.error);
-      console.log("📝 Result url:", result?.url);
-
       if (result?.error) {
-        console.error("❌ Sign in failed:", result.error);
         return {
           success: false,
           error: true,
-          message: result.error || "Invalid credentials",
+          message: result.error,
         };
       }
 
       if (result?.ok) {
-        console.log("✅ Sign in successful");
+        // Fetch the session to get tokens
+        const session = await getSession();
+        
         return {
           success: true,
-          url: result.url || "/admin", // Default to admin dashboard
+          url: result.url || "/admin",
+          accessToken: session?.accessToken,
+          refreshToken: session?.refreshToken,
         };
       }
 
-      // Fallback for unexpected results
       return {
         success: false,
         error: true,
-        message: "An unexpected error occurred",
+        message: "Login failed",
       };
     } catch (error: any) {
-      console.error("❌ Sign in error:", error);
+      console.error("Auth service error:", error);
       return {
         success: false,
         error: true,
-        message: error.message || "Failed to sign in",
+        message: error.message || "An error occurred during sign in",
+      };
+    }
+  },
+
+  async signout(): Promise<SignOutResponse> {
+    try {
+      await signOut({ redirect: false });
+      
+      return {
+        success: true,
+        message: "Logged out successfully",
+      };
+    } catch (error: any) {
+      console.error("Sign out error:", error);
+      return {
+        success: false,
+        message: error.message || "An error occurred during sign out",
       };
     }
   },

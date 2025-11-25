@@ -62,7 +62,7 @@ const SellerDetails = () => {
                           </h3>
                           <p className="text-[#454345] font-normal text-base flex gap-2 items-center">
                             <span className="font-medium">
-                              {selectedUser.name}
+                              {selectedUser.fullName}
                             </span>
                             <span className="bg-[#1DD2AE] text-[#171417] text-sm rounded-[8px] py-0.5 px-2">
                               Seller
@@ -93,8 +93,8 @@ const SellerDetails = () => {
                           <UserManagementStatusBadge
                             status={
                               selectedUser.isVerified
-                                ? "Verified"
-                                : "Unverified"
+                                ? "VERIFIED"
+                                : "UNVERIFIED"
                             }
                           />
                         </div>
@@ -102,7 +102,7 @@ const SellerDetails = () => {
                           <h3 className="text-[#171417] font-medium text-base ">
                             Account Status
                           </h3>
-                          <UserManagementStatusBadge status="Deactivated" />
+                          <UserManagementStatusBadge status="DEACTIVATED" />
                         </div>
 
                         <div className="flex justify-between">
