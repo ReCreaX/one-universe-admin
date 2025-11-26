@@ -5,11 +5,12 @@ import { cn } from "@/lib/utils";
 import { FaCheck, FaUserCircle } from "react-icons/fa";
 import { X } from "lucide-react";
 import UserManagementStatusBadge from "../../UserManagementStatusBadge";
-import { userManagementStore, UserType } from "@/store/userManagementStore";
+import { userManagementStore, UserType, FullUserType } from "@/store/userManagementStore";
 import { formatDate } from "@/utils/formatTime";
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { useSession } from "next-auth/react";
+import getBaseUrl from "@/services/baseUrl";
 
 interface SellersTableProps {
   currentPage: number;
@@ -34,11 +35,28 @@ export default function SellersTable({ currentPage, onTotalPagesChange }: Seller
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Convert UserType to FullUserType when opening modal
   const handleSelectUser = (user: UserType) => {
-    openModal("openSeller", user);
+    console.log("🟦 handleSelectUser CALLED with user:", user);
+    
+    // Convert UserType to FullUserType
+    const fullUser: FullUserType = {
+      ...user,
+      wallet: user.Wallet || null,
+      Wallet: user.Wallet || null,
+      profile: user.profile || null,
+      sellerProfile: user.profile || null,
+      panicContacts: user.panicContacts || [],
+      PanicContact: user.panicContacts || [],
+      jobDocuments: [],
+      JobDocument: [],
+      userRoles: user.userRoles || [],
+      bookingStats: user.bookingStats || null,
+    };
+    
+    openModal("openSeller", fullUser);
   };
 
-  // THIS IS THE CRITICAL FIX: Stabilize the callback
   const stableTotalPagesCallback = useCallback(onTotalPagesChange, []);
 
   useEffect(() => {
@@ -49,8 +67,10 @@ export default function SellersTable({ currentPage, onTotalPagesChange }: Seller
         setLoading(true);
         setError(null);
 
+        const BASE_URL = getBaseUrl();
+
         const response = await axios.get<ApiResponse>(
-          `https://one-universe-de5673cf0d65.herokuapp.com/api/v1/admin/sellers?page=${currentPage}&limit=10`,
+          `${BASE_URL}/admin/sellers?page=${currentPage}&limit=10`,
           {
             headers: {
               Authorization: `Bearer ${session.accessToken}`,
@@ -60,7 +80,6 @@ export default function SellersTable({ currentPage, onTotalPagesChange }: Seller
 
         setSellers(response.data.data || []);
 
-        // Only update total pages if it's different (prevents re-renders)
         if (response.data.pagination?.pages) {
           stableTotalPagesCallback(response.data.pagination.pages);
         }
@@ -78,9 +97,7 @@ export default function SellersTable({ currentPage, onTotalPagesChange }: Seller
 
     fetchSellers();
   }, [currentPage, session?.accessToken, status, stableTotalPagesCallback]);
-  //                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Stable!
 
-  // Loading & Auth States
   if (status === "loading" || !session?.accessToken) {
     return (
       <div className="w-full flex items-center justify-center py-12">
@@ -148,7 +165,6 @@ export default function SellersTable({ currentPage, onTotalPagesChange }: Seller
               >
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2 relative group">
-                    {/* Avatar */}
                     <div className="relative size-6 rounded-full overflow-hidden bg-gray-200">
                       {item.profilePicture ? (
                         <img
@@ -168,7 +184,6 @@ export default function SellersTable({ currentPage, onTotalPagesChange }: Seller
                       {item.fullName}
                     </p>
 
-                    {/* Verification Badge */}
                     {item.verificationStatus === true ? (
                       <div className="bg-[#1FC16B] size-[17px] rounded-full flex items-center justify-center">
                         <FaCheck className="text-white" size={12} />
@@ -179,7 +194,6 @@ export default function SellersTable({ currentPage, onTotalPagesChange }: Seller
                       </div>
                     )}
 
-                    {/* Tooltip */}
                     <div className="absolute left-0 top-8 z-50 hidden group-hover:flex items-center gap-2 bg-white border border-gray-200 shadow-md rounded-[8px] p-2 w-64">
                       {item.verificationStatus === true ? (
                         <div className="bg-[#1FC16B] w-5 h-5 rounded-full flex items-center justify-center">

@@ -4,11 +4,11 @@
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { useSession } from "next-auth/react";
-import Image from "next/image";
 import { FaUserCircle } from "react-icons/fa";
 import UserManagementStatusBadge from "../../UserManagementStatusBadge";
-import { userManagementStore, UserType } from "@/store/userManagementStore";
+import { userManagementStore, UserType, FullUserType } from "@/store/userManagementStore";
 import { formatDate } from "@/utils/formatTime";
+import getBaseUrl from "@/services/baseUrl";
 
 interface BuyersTableProps {
   currentPage: number;
@@ -33,12 +33,29 @@ export default function BuyersTable({ currentPage, onTotalPagesChange }: BuyersT
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Convert UserType to FullUserType when opening modal
   const handleSelectUser = (user: UserType) => {
-    openModal("openBuyer", user);
+    console.log("🟦 handleSelectUser CALLED with buyer:", user);
+    
+    // Convert UserType to FullUserType
+    const fullUser: FullUserType = {
+      ...user,
+      wallet: user.Wallet || null,
+      Wallet: user.Wallet || null,
+      profile: user.profile || null,
+      sellerProfile: user.profile || null,
+      panicContacts: user.panicContacts || [],
+      PanicContact: user.panicContacts || [],
+      jobDocuments: [],
+      JobDocument: [],
+      userRoles: user.userRoles || [],
+      bookingStats: user.bookingStats || null,
+    };
+    
+    openModal("openBuyer", fullUser);
   };
 
-  // ←←← THIS IS THE KEY FIX
-  const stableCallback = useCallback(onTotalPagesChange, []); // never changes
+  const stableCallback = useCallback(onTotalPagesChange, []);
 
   useEffect(() => {
     if (status === "loading" || !session?.accessToken) return;
@@ -48,22 +65,27 @@ export default function BuyersTable({ currentPage, onTotalPagesChange }: BuyersT
         setLoading(true);
         setError(null);
 
+        const BASE_URL = getBaseUrl();
+
         const response = await axios.get<ApiResponse>(
-          `https://one-universe-de5673cf0d65.herokuapp.com/api/v1/admin/buyers?page=${currentPage}&limit=10`,
+          `${BASE_URL}/admin/buyers?page=${currentPage}&limit=10`,
           {
             headers: { Authorization: `Bearer ${session.accessToken}` },
           }
         );
 
-        setUsers(response.data.data);
+        setUsers(response.data.data || []);
 
-        // Only update total pages when it actually changes
-        if (response.data.pagination.pages !== undefined) {
+        if (response.data.pagination?.pages) {
           stableCallback(response.data.pagination.pages);
         }
       } catch (err: any) {
-        console.error(err);
-        setError("Failed to load buyers.");
+        console.error("Error fetching buyers:", err);
+        setError(
+          err.response?.status === 401
+            ? "Session expired. Please login again."
+            : "Failed to load buyers."
+        );
       } finally {
         setLoading(false);
       }
@@ -71,9 +93,16 @@ export default function BuyersTable({ currentPage, onTotalPagesChange }: BuyersT
 
     fetchBuyers();
   }, [currentPage, session?.accessToken, status, stableCallback]);
-  //                                     ^^^^^^^^^^^^^^^^ stable dependency
 
-  if (loading || status === "loading") {
+  if (status === "loading" || !session?.accessToken) {
+    return (
+      <div className="w-full flex items-center justify-center py-12">
+        <p className="text-gray-500">Authenticating...</p>
+      </div>
+    );
+  }
+
+  if (loading) {
     return (
       <div className="w-full flex items-center justify-center py-12">
         <p className="text-gray-500">Loading buyers...</p>
@@ -83,9 +112,9 @@ export default function BuyersTable({ currentPage, onTotalPagesChange }: BuyersT
 
   if (error) {
     return (
-      <div className="w-full text-center py-12 text-red-500">
-        {error}
-        <button onClick={() => window.location.reload()} className="ml-4 text-blue-500 underline">
+      <div className="w-full text-center py-12">
+        <p className="text-red-500 mb-4">{error}</p>
+        <button onClick={() => window.location.reload()} className="text-blue-500 hover:underline">
           Retry
         </button>
       </div>
@@ -93,19 +122,25 @@ export default function BuyersTable({ currentPage, onTotalPagesChange }: BuyersT
   }
 
   if (users.length === 0) {
-    return <div className="w-full text-center py-12 text-gray-500">No buyers found.</div>;
+    return (
+      <div className="w-full text-center py-12 text-gray-500">
+        No buyers found.
+      </div>
+    );
   }
 
   return (
-    <>
+    <div className="w-full">
       {/* Desktop Table */}
       <div className="hidden md:block overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-[#FFFCFC] text-[#646264] text-left border-b border-[#E5E5E5] h-[60px]">
             <tr>
-              <th className="py-3 px-4 font-medium flex items-center gap-2">
-                <FaUserCircle size={18} />
-                Full Name
+              <th className="py-3 px-4 font-medium">
+                <div className="flex items-center gap-2">
+                  <FaUserCircle size={18} />
+                  <p>Full Name</p>
+                </div>
               </th>
               <th className="py-3 px-4 font-medium">Email Address</th>
               <th className="py-3 px-4 font-medium">Phone Number</th>
@@ -137,11 +172,13 @@ export default function BuyersTable({ currentPage, onTotalPagesChange }: BuyersT
                         </div>
                       )}
                     </div>
-                    <p className="font-medium text-gray-900">{item.fullName}</p>
+                    <p className="font-medium text-gray-900 hover:underline cursor-pointer">
+                      {item.fullName}
+                    </p>
                   </div>
                 </td>
                 <td className="py-3 px-4">{item.email}</td>
-                <td className="py-3 px-4">{item.phone}</td>
+                <td className="py-3 px-4">{item.phone || "-"}</td>
                 <td className="py-3 px-4">
                   <UserManagementStatusBadge status={item.status} />
                 </td>
@@ -189,6 +226,6 @@ export default function BuyersTable({ currentPage, onTotalPagesChange }: BuyersT
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }

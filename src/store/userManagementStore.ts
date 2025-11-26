@@ -3,6 +3,7 @@ import { create } from "zustand";
 
 type ModalType = "openBuyer" | "openSeller" | "openAdmin" | null;
 
+// Keep your existing types...
 export type RoleType = {
   id: string;
   name: string;
@@ -69,26 +70,68 @@ export type UserType = {
   profilePicture?: string | null;
   userType: "SELLER" | "BUYER" | "ADMIN";
   profile?: ProfileType;
-  wallet?: WalletType;
+  Wallet?: WalletType;
   verificationStatus?: boolean;
   userRoles?: UserRole[];
   panicContacts?: PanicContactType[];
   bookingStats?: BookingStatsType;
 };
 
-interface ModalState {
-  modalType: ModalType;
-  selectedUser: UserType | null;
-  openModal: (type: ModalType, user?: UserType) => void;
-  closeModal: () => void;
+export interface FullUserType {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  location?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  profilePicture?: string | null;
+  userType?: "SELLER" | "BUYER" | "ADMIN";
+  wallet?: any;
+  Wallet?: any;
+  profile?: any;
+  sellerProfile?: any;
+  panicContacts?: any[];
+  PanicContact?: any[];
+  jobDocuments?: any[];
+  JobDocument?: any[];
+  verificationStatus?: boolean;
+  userRoles?: any[];
+  bookingStats?: any;
+  [key: string]: any;
 }
 
-export const userManagementStore = create<ModalState>((set) => ({
+// MAIN STORE — NOW WITH REFETCH!
+interface UserManagementStore {
+  modalType: ModalType;
+  selectedUser: FullUserType | null;
+
+  // Modal actions
+  openModal: (type: ModalType, user?: FullUserType) => void;
+  closeModal: () => void;
+
+  // NEW: Refetch function for instant table update
+  refetchUsers: (() => void) | null;
+  setRefetchUsers: (fn: () => void) => void;
+}
+
+export const userManagementStore = create<UserManagementStore>((set) => ({
   modalType: null,
   selectedUser: null,
 
-  openModal: (type, user) =>
-    set({ modalType: type, selectedUser: user || null }),
+  // Modal controls
+  openModal: (type, user) => {
+    console.log("openModal CALLED with:", { type, user });
+    set({ modalType: type, selectedUser: user || null });
+  },
 
-  closeModal: () => set({ modalType: null, selectedUser: null }),
+  closeModal: () => {
+    console.log("closeModal CALLED");
+    set({ modalType: null, selectedUser: null });
+  },
+
+  // Refetch users after success (deactivate, warning, etc.)
+  refetchUsers: null,
+  setRefetchUsers: (fn) => set({ refetchUsers: fn }),
 }));

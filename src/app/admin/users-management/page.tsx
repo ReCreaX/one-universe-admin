@@ -1,5 +1,6 @@
 "use client";
-import { ListFilter, Plus, Search } from "lucide-react";
+
+import { ListFilter, Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import UserTabSelector from "./UserTabSelector";
 import BuyersTable from "./Tabs/BuyerTabs/BuyersTable";
 import SellersTable from "./Tabs/SellersTabs/SellersTable";
@@ -13,7 +14,6 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { userManagementStore } from "@/store/userManagementStore";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // Reusable Pagination Component
 interface PaginationProps {
@@ -59,11 +59,11 @@ const Pagination = ({ currentPage, totalPages, onPageChange }: PaginationProps) 
 };
 
 const UsersManagement = () => {
-  const { modalType } = userManagementStore();
+  const { modalType, setRefetchUsers } = userManagementStore();
   const [showFilter, setShowFilter] = useState(false);
   const [activeTab, setActiveTab] = useState<"Buyers" | "Sellers" | "Admin Users">("Buyers");
 
-  // Pagination state: current page + total pages per tab
+  // Pagination state per tab
   const [pagination, setPagination] = useState({
     Buyers: { current: 1, total: 1 },
     Sellers: { current: 1, total: 1 },
@@ -81,6 +81,18 @@ const UsersManagement = () => {
   };
 
   const filterRef = useRef<HTMLDivElement>(null);
+
+  // THIS IS THE MAGIC: Give the store a way to refresh all tables instantly
+  useEffect(() => {
+    const refreshCurrentTable = () => {
+      setPagination(prev => ({
+        ...prev,
+        [activeTab]: { ...prev[activeTab] } // triggers re-render
+      }));
+    };
+
+    setRefetchUsers(() => refreshCurrentTable);
+  }, [activeTab, setRefetchUsers]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

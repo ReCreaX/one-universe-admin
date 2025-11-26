@@ -39,30 +39,19 @@ export default function AdminTable({ currentPage, onTotalPagesChange }: AdminTab
     openModal("openAdmin", admin);
   };
 
-  // THIS IS THE KEY FIX: Stabilize the callback to prevent infinite re-fetch
-  const stableTotalPagesCallback = useCallback(onTotalPagesChange, []);
+  // Stable callback to prevent unnecessary re-renders
+  const stableCallback = useCallback(onTotalPagesChange, []);
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (status === "unauthenticated") {
-      setError("Please log in again.");
-      setLoading(false);
-      return;
-    }
+    // Wait for session to be ready
+    if (status === "loading" || !session?.accessToken) return;
 
     const fetchAdmins = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const token =
-          session?.accessToken ||
-          (typeof window !== "undefined" ? localStorage.getItem("token") : null);
-
-        if (!token) {
-          setError("No authentication token found.");
-          return;
-        }
+        const token = session.accessToken;
 
         const response = await axios.get<ApiResponse>(
           `${BASE_URL}/admin/others?page=${currentPage}&limit=10`,
@@ -74,9 +63,13 @@ export default function AdminTable({ currentPage, onTotalPagesChange }: AdminTab
         const data = response.data.data || [];
         setAdmins(data);
 
-        // Only update total pages if available
-        const totalPages = response.data.pagination?.pages || 1;
-        stableTotalPagesCallback(totalPages);
+        // Only trust backend's pagination.pages
+        if (response.data.pagination?.pages !== undefined) {
+          stableCallback(response.data.pagination.pages);
+        } else {
+          // Safe fallback: if backend doesn't send pagination, assume current page exists
+          stableCallback(Math.max(currentPage, 1));
+        }
       } catch (err: any) {
         console.error("Failed to fetch admins:", err);
         setError(
@@ -90,11 +83,18 @@ export default function AdminTable({ currentPage, onTotalPagesChange }: AdminTab
     };
 
     fetchAdmins();
-  }, [currentPage, session?.accessToken, status, stableTotalPagesCallback]);
-  //                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Stable!
+  }, [currentPage, session?.accessToken, status, stableCallback]);
 
-  // Loading & Auth States
-  if (status === "loading" || loading) {
+  // Loading or authenticating
+  if (status === "loading" || !session?.accessToken) {
+    return (
+      <div className="w-full flex items-center justify-center py-12">
+        <p className="text-gray-500">Authenticating...</p>
+      </div>
+    );
+  }
+
+  if (loading) {
     return (
       <div className="w-full flex items-center justify-center py-12">
         <p className="text-gray-500">Loading admin users...</p>
@@ -195,7 +195,7 @@ export default function AdminTable({ currentPage, onTotalPagesChange }: AdminTab
         {admins.map((item) => (
           <div
             key={item.id}
-            className="flex items-center justify-between border border-gray-200 rounded-2xl p-4 bg-white shadow-sm cursor-pointer"
+            className="flex items-center justify-between border border-gray-200 rounded-2xl p-4 bg-white shadow-sm cursor-pointer hover:shadow-md transition"
             onClick={() => handleSelectAdmin(item)}
           >
             <div className="flex items-center gap-3">
