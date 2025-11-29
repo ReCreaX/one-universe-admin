@@ -11,7 +11,6 @@ import UserAdminActions from "../../components/UserAdminActions";
 const AdminDetails = () => {
   const { modalType, selectedUser, closeModal } = userManagementStore();
   const { data: session } = useSession();
-  const [showHistory, setShowHistory] = React.useState(false);
 
   if (!selectedUser || modalType !== "openAdmin") return null;
 
@@ -93,7 +92,7 @@ const AdminDetails = () => {
               </div>
             </div>
 
-            {/* Admin Actions with View History Button */}
+            {/* Admin Actions WITHOUT View History Button */}
             <div className="bg-white pt-3 pb-12">
               <UserAdminActions
                 userId={selectedUser.id}
@@ -101,7 +100,7 @@ const AdminDetails = () => {
                 userEmail={selectedUser.email}
                 isActive={isActive}
                 onSuccess={closeModal}
-                showHistoryButton={true}
+                showHistoryButton={false}
               />
             </div>
           </motion.div>

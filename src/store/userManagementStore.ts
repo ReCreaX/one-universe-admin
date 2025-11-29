@@ -115,6 +115,12 @@ export interface SellerFilterState {
   toDate?: Date;
 }
 
+export interface AdminFilterState {
+  status?: "active" | "inactive" | "pending";
+  fromDate?: Date;
+  toDate?: Date;
+}
+
 interface UserManagementStore {
   modalType: ModalType;
   selectedUser: FullUserType | null;
@@ -126,10 +132,13 @@ interface UserManagementStore {
   // Filter state per tab
   buyerFilters: BuyerFilterState;
   sellerFilters: SellerFilterState;
+  adminFilters: AdminFilterState;
   setBuyerFilters: (filters: BuyerFilterState) => void;
   setSellerFilters: (filters: SellerFilterState) => void;
+  setAdminFilters: (filters: AdminFilterState) => void;
   clearBuyerFilters: () => void;
   clearSellerFilters: () => void;
+  clearAdminFilters: () => void;
 
   // Modal actions
   openModal: (type: ModalType, user?: FullUserType) => void;
@@ -151,10 +160,13 @@ export const userManagementStore = create<UserManagementStore>((set) => ({
   // Filters
   buyerFilters: {},
   sellerFilters: {},
+  adminFilters: {},
   setBuyerFilters: (filters) => set({ buyerFilters: filters }),
   setSellerFilters: (filters) => set({ sellerFilters: filters }),
+  setAdminFilters: (filters) => set({ adminFilters: filters }),
   clearBuyerFilters: () => set({ buyerFilters: {} }),
   clearSellerFilters: () => set({ sellerFilters: {} }),
+  clearAdminFilters: () => set({ adminFilters: {} }),
 
   // Modal controls
   openModal: (type, user) => {

@@ -28,7 +28,7 @@ interface ApiResponse {
 }
 
 export default function AdminTable({ currentPage, onTotalPagesChange }: AdminTableProps) {
-  const { openModal, searchQuery } = userManagementStore();
+  const { openModal, searchQuery, adminFilters } = userManagementStore();
   const { data: session, status } = useSession();
 
   const [admins, setAdmins] = useState<UserType[]>([]);
@@ -62,6 +62,21 @@ export default function AdminTable({ currentPage, onTotalPagesChange }: AdminTab
           params.append("search", searchQuery);
         }
 
+        // Add filters
+        if (adminFilters.status) {
+          params.append("status", adminFilters.status);
+        }
+        if (adminFilters.fromDate) {
+          // Send as YYYY-MM-DD format
+          const fromDateStr = adminFilters.fromDate.toISOString().split('T')[0];
+          params.append("fromDate", fromDateStr);
+        }
+        if (adminFilters.toDate) {
+          // Send as YYYY-MM-DD format
+          const toDateStr = adminFilters.toDate.toISOString().split('T')[0];
+          params.append("toDate", toDateStr);
+        }
+
         const response = await axios.get<ApiResponse>(
           `${BASE_URL}/admin/others?${params.toString()}`,
           {
@@ -90,7 +105,7 @@ export default function AdminTable({ currentPage, onTotalPagesChange }: AdminTab
     };
 
     fetchAdmins();
-  }, [currentPage, session?.accessToken, status, stableCallback, searchQuery]);
+  }, [currentPage, session?.accessToken, status, stableCallback, searchQuery, adminFilters]);
 
   if (status === "loading" || !session?.accessToken) {
     return (
@@ -122,8 +137,8 @@ export default function AdminTable({ currentPage, onTotalPagesChange }: AdminTab
   if (admins.length === 0) {
     return (
       <div className="w-full text-center py-12 text-gray-500">
-        {searchQuery 
-          ? "No admin users match your search." 
+        {searchQuery || Object.keys(adminFilters).length > 0
+          ? "No admin users match your search or filters." 
           : "No admin users found."}
       </div>
     );

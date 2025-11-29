@@ -1,20 +1,20 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, FileText, TrendingUp, AlertCircle } from "lucide-react";
 import { userManagementStore } from "@/store/userManagementStore";
 import { userDetailsStore } from "@/store/userDetailsStore";
 import UserManagementStatusBadge from "../../UserManagementStatusBadge";
 import { useSession } from "next-auth/react";
-
-// Import the reusable component (now includes History button)
 import UserAdminActions from "../../components/UserAdminActions";
+import UserHistoryModal from "../../components/modals/UserHistoryModal";
 
 const BuyerDetails = () => {
   const { modalType, selectedUser, closeModal } = userManagementStore();
   const { fullUser, loading, fetchUser } = userDetailsStore();
   const { data: session } = useSession();
+  const [showHistory, setShowHistory] = useState(false);
 
   // Fetch full user details when modal opens
   useEffect(() => {
@@ -65,7 +65,7 @@ const BuyerDetails = () => {
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: "spring", damping: 20, stiffness: 120 }}
           >
-            {/* Header - Removed duplicate View History button */}
+            {/* Header with View History Button */}
             <div className="flex rounded-t-2xl items-center justify-between bg-[#E8FBF7] pt-8 px-4 py-4">
               <div className="flex items-center gap-4">
                 <button
@@ -77,6 +77,14 @@ const BuyerDetails = () => {
                 </button>
                 <h2 className="text-xl font-bold text-[#171417]">Buyer Profile</h2>
               </div>
+              
+              {/* View History Button - Moved to header */}
+              <button
+                onClick={() => setShowHistory(true)}
+                className="bg-gradient-to-r from-teal-600 to-cyan-700 px-6 py-1.5 rounded-[36px] text-white text-sm font-medium hover:from-teal-700 hover:to-cyan-800 transition"
+              >
+                View History
+              </button>
             </div>
 
             {/* Loading State */}
@@ -228,7 +236,7 @@ const BuyerDetails = () => {
                   </section>
                 </section>
 
-                {/* UserAdminActions now includes View History button + all modals */}
+                {/* UserAdminActions without View History button */}
                 <div className="bg-white pt-3 pb-12">
                   <UserAdminActions
                     userId={selectedUser.id}
@@ -236,12 +244,20 @@ const BuyerDetails = () => {
                     userEmail={displayUser.email}
                     isActive={isActive}
                     onSuccess={closeModal}
-                    showHistoryButton={true}
+                    showHistoryButton={false}
                   />
                 </div>
               </div>
             )}
           </motion.div>
+
+          {/* History Modal */}
+          <UserHistoryModal
+            isOpen={showHistory}
+            onClose={() => setShowHistory(false)}
+            userId={selectedUser.id}
+            userName={displayUser.fullName}
+          />
         </motion.div>
       )}
     </AnimatePresence>

@@ -84,10 +84,14 @@ export default function SellersTable({ currentPage, onTotalPagesChange }: Seller
           params.append("verification", sellerFilters.verification);
         }
         if (sellerFilters.fromDate) {
-          params.append("fromDate", sellerFilters.fromDate.toISOString());
+          // Send as YYYY-MM-DD format
+          const fromDateStr = sellerFilters.fromDate.toISOString().split('T')[0];
+          params.append("fromDate", fromDateStr);
         }
         if (sellerFilters.toDate) {
-          params.append("toDate", sellerFilters.toDate.toISOString());
+          // Send as YYYY-MM-DD format
+          const toDateStr = sellerFilters.toDate.toISOString().split('T')[0];
+          params.append("toDate", toDateStr);
         }
 
         const response = await axios.get<ApiResponse>(

@@ -79,10 +79,14 @@ export default function BuyersTable({ currentPage, onTotalPagesChange }: BuyersT
           params.append("status", buyerFilters.status);
         }
         if (buyerFilters.fromDate) {
-          params.append("fromDate", buyerFilters.fromDate.toISOString());
+          // Send as YYYY-MM-DD format
+          const fromDateStr = buyerFilters.fromDate.toISOString().split('T')[0];
+          params.append("fromDate", fromDateStr);
         }
         if (buyerFilters.toDate) {
-          params.append("toDate", buyerFilters.toDate.toISOString());
+          // Send as YYYY-MM-DD format
+          const toDateStr = buyerFilters.toDate.toISOString().split('T')[0];
+          params.append("toDate", toDateStr);
         }
 
         const response = await axios.get<ApiResponse>(
