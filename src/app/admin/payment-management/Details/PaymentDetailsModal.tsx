@@ -12,7 +12,7 @@ interface PaymentDetailsModalProps {
     buyer: { name: string; email: string; phone: string };
     seller: { name: string; email: string; phone: string };
     amount: string;
-    status: "PAID" | "PENDING" | "DISPUTED" | "PENDING REFUND" | "REFUNDED";
+    status: "PAID" | "PENDING" | "DISPUTED" | "PENDING REFUND" | "REFUNDED" | "FAILED";
     bookingId: string;
     bookingStatus: "Cancelled" | "Completed" | "In Progress";
     jobStatus: "Pending" | "In Progress" | "Completed" | "Cancelled";
@@ -29,6 +29,7 @@ const statusConfig = {
   DISPUTED: { bg: "bg-[#FDEDED]", text: "text-[#D00416]", label: "Disputed" },
   "PENDING REFUND": { bg: "bg-[#E5E5FF]", text: "text-[#6366F1]", label: "Refund Pending" },
   REFUNDED: { bg: "bg-[#E0E0E0]", text: "text-[#525252]", label: "Refunded" },
+  FAILED: { bg: "bg-[#FDEDED]", text: "text-[#D00416]", label: "Failed" },
 };
 
 const badgeConfig = {

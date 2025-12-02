@@ -11,7 +11,7 @@ type Payment = {
   buyer: string;
   seller: string;
   totalAmount: string;
-  status: "PAID" | "PENDING" | "DISPUTED" | "PENDING REFUND" | "REFUNDED";
+  status: "PAID" | "PENDING" | "DISPUTED" | "PENDING REFUND" | "REFUNDED" | "FAILED";
   date: string;
 };
 
@@ -25,6 +25,7 @@ const statusConfig = {
   DISPUTED: { label: "Disputed", color: "bg-[#FDEDED] text-[#D00416]" },
   "PENDING REFUND": { label: "Pending Refund", color: "bg-[#E5E5FF] text-[#6366F1]" },
   REFUNDED: { label: "Refunded", color: "bg-[#E0E0E0] text-[#525252]" },
+  FAILED: { label: "Failed", color: "bg-[#FDEDED] text-[#D00416]" },
 };
 
 export default function PaymentTable({ data }: PaymentTableProps) {

@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import { cn } from "@/lib/utils"; // you already have this in your project
+import { cn } from "@/lib/utils";
 
 type PaymentStatusProps = {
-  status: "PAID" | "PENDING" | "DISPUTED" | "PENDING REFUND" | "REFUNDED";
+  status: "PAID" | "PENDING" | "DISPUTED" | "PENDING REFUND" | "REFUNDED" | "FAILED";
 };
 
 const statusConfig: Record<PaymentStatusProps["status"], { textClass: string; bgClass: string }> = {
@@ -13,6 +13,7 @@ const statusConfig: Record<PaymentStatusProps["status"], { textClass: string; bg
   DISPUTED: { textClass: "text-[#D00416]", bgClass: "bg-[#FB37481A]" },
   "PENDING REFUND": { textClass: "text-[#9D7F04]", bgClass: "bg-[#FFF2B9]" },
   REFUNDED: { textClass: "text-[#6B6B6B]", bgClass: "bg-[#F2F2F2]" },
+  FAILED: { textClass: "text-[#D00416]", bgClass: "bg-[#FDEDED]" },
 };
 
 export function PaymentStatus({ status }: PaymentStatusProps) {
