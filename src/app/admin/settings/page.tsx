@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import { User, Camera } from "lucide-react";
+import { NotificationTab } from "./Tabs/NotificationTab";
+
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState("account");
@@ -142,7 +144,8 @@ const SettingsPage = () => {
               )}
 
               {/* Placeholder for other tabs */}
-              {activeTab !== "account" && (
+              {activeTab === "notifications" && <NotificationTab />}
+              {activeTab !== "account" && activeTab !== "notifications" && (
                 <div className="flex items-center justify-center h-96 text-gray-400">
                   <p className="font-dm-sans text-lg">Coming Soon</p>
                 </div>

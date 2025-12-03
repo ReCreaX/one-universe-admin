@@ -4,12 +4,11 @@ import { useState } from "react";
 import { Search, ChevronDown, Check } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import EmptySupportTickets from "./EmptySupportTickets";
 import SupportTicketsTable from "./Tabs/ReportTabs/SupportTicketsTable";
 import AppRatingsTable from "./Tabs/RatingsTabs/AppRatingsTable";
 import RatingsFilterDrawer from "./Filters/RatingsFilterDrawer";
+import EmptyState from "./EmptyState";
 
-// Status Filter Dropdown Component (Figma-perfect)
 const StatusFilterDropdown = ({
   isOpen,
   onClose,
@@ -27,7 +26,6 @@ const StatusFilterDropdown = ({
 
   return (
     <div className="relative">
-      {/* Dropdown */}
       <div
         className="absolute top-10 right-0 w-[125px] bg-white rounded-lg shadow-lg overflow-hidden z-50 border border-[#E5E5E5]"
         style={{
@@ -42,7 +40,6 @@ const StatusFilterDropdown = ({
               className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 transition text-[#3C3C3C] font-dm-sans text-base
                 ${index !== statuses.length - 1 ? "border-b border-[#E5E5E5]" : ""}`}
             >
-              {/* Custom Rounded Checkbox */}
               <div className="relative">
                 <input
                   type="checkbox"
@@ -69,7 +66,6 @@ const StatusFilterDropdown = ({
         </div>
       </div>
 
-      {/* Close on outside click */}
       <div className="fixed inset-0 z-40" onClick={onClose} />
     </div>
   );
@@ -80,7 +76,6 @@ const AdminSupportPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showRatingsFilter, setShowRatingsFilter] = useState(false);
 
-  // Status Filter State
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([
     "New",
     "In Progress",
@@ -96,12 +91,11 @@ const AdminSupportPage = () => {
     );
   };
 
-  const hasTickets = true;
+  const hasTickets = false; // Toggle this to test empty state
 
   return (
     <>
       <main className="w-full max-w-[1120px] mx-auto px-4 sm:px-6 lg:px-10 pt-6 pb-8">
-        {/* Header */}
         <header className="mb-8">
           <div className="flex flex-col gap-2">
             <h1 className="font-dm-sans font-bold text-[24px] leading-[120%] text-[#171417]">
@@ -113,29 +107,27 @@ const AdminSupportPage = () => {
           </div>
         </header>
 
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-[363px] h-[46px] bg-transparent border-b border-[#E8E3E3] rounded-none p-0 mb-8">
             <TabsTrigger
               value="reported-issues"
-              className="h-[46px] px-4 py-3 rounded-none border-b-[1.5px] data-[state=active]:border-[#154751] data-[state=active]:bg-[#E6E8E9] data-[state=inactive]:border-transparent font-dm-sans font-medium text-base leading-[140%] data-[state=active]:text-transparent data-[state=active]:bg-clip-text data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#154751] data-[state=active]:to-[#04171F] data-[state=inactive]:text-[#454345]"
+              className="h-[46px] px-4 py-3 rounded-none border-b-[1.5px] data-[state=active]:border-[#154751] data-[state=active]:bg-[#E6E8E9] font-dm-sans font-medium text-base"
             >
               Reported Issues
             </TabsTrigger>
             <TabsTrigger
               value="ratings-reviews"
-              className="h-[46px] px-4 py-3 rounded-none border-b-[1.5px] data-[state=active]:border-[#154751] data-[state=active]:bg-[#E6E8E9] data-[state=inactive]:border-transparent font-dm-sans font-medium text-base leading-[140%] data-[state=active]:text-transparent data-[state=active]:bg-clip-text data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#154751] data-[state=active]:to-[#04171F] data-[state=inactive]:text-[#454345]"
+              className="h-[46px] px-4 py-3 rounded-none border-b-[1.5px] data-[state=active]:border-[#154751] data-[state=active]:bg-[#E6E8E9] font-dm-sans font-medium text-base"
             >
               App Ratings & Reviews
             </TabsTrigger>
           </TabsList>
 
-          {/* === REPORTED ISSUES TAB === */}
+          {/* Reported Issues Tab */}
           <TabsContent value="reported-issues" className="mt-0">
             <div className="bg-white rounded-t-[30px] border border-[#E8E3E3] overflow-hidden">
-              {/* Header */}
               <div className="h-12 px-6 flex items-center justify-between border-b border-[#E8E3E3]">
-                <h2 className="font-dm-sans font-medium text-xl leading-[140%] text-[#171417]">
+                <h2 className="font-dm-sans font-medium text-xl text-[#171417]">
                   Support Tickets
                 </h2>
                 <span className="font-dm-sans font-medium text-sm text-[#171417] bg-[#E6E8E9] px-2 py-0.5 rounded">
@@ -143,8 +135,7 @@ const AdminSupportPage = () => {
                 </span>
               </div>
 
-              {/* Search + Status Filter */}
-             <div className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+              <div className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
                 <div className="relative w-full max-w-[532px]">
                   <input
                     type="text"
@@ -156,21 +147,12 @@ const AdminSupportPage = () => {
                   <Search size={24} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7B7B7B]" />
                 </div>
 
-                {/* Status Filter Button + Dropdown */}
                 <div className="relative">
                   <button
                     onClick={() => setShowStatusFilter(!showStatusFilter)}
                     className="flex items-center gap-2 h-[38px] px-4 border border-[#B5B1B1] rounded-lg hover:bg-gray-50 transition"
                   >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[#171417]">
-                      <path
-                        d="M6.22222 13.3333H9.77778V11.5556H6.22222V13.3333ZM0 2.66667V4.44444H16V2.66667H0ZM2.66667 8.88889H13.3333V7.11111H2.66667V8.88889Z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                    <span className="font-dm-sans text-base leading-[140%] text-[#171417]">
-                      Status
-                    </span>
+                    <span className="font-dm-sans text-base text-[#171417]">Status</span>
                     <ChevronDown
                       size={16}
                       className={`text-[#171417] transition-transform ${showStatusFilter ? "rotate-180" : ""}`}
@@ -186,45 +168,38 @@ const AdminSupportPage = () => {
                 </div>
               </div>
 
-              {/* Table */}
+              {/* Table or Empty State */}
               <div className="min-h-[420px] overflow-x-auto bg-white">
-                {hasTickets ? <SupportTicketsTable /> : <EmptySupportTickets />}
+                {hasTickets ? <SupportTicketsTable /> : <EmptyState type="support" />}
               </div>
             </div>
           </TabsContent>
 
-          {/* === RATINGS & REVIEWS TAB === */}
+          {/* Ratings & Reviews Tab */}
           <TabsContent value="ratings-reviews" className="mt-0">
             <div className="bg-white rounded-t-[30px] border border-[#E8E3E3] overflow-hidden">
               <div className="h-12 px-6 flex items-center justify-between border-b border-[#E8E3E3]">
-                <h2 className="font-dm-sans font-medium text-xl leading-[140%] text-[#171417]">
+                <h2 className="font-dm-sans font-medium text-xl text-[#171417]">
                   App Ratings & Reviews
                 </h2>
                 <button
                   onClick={() => setShowRatingsFilter(true)}
                   className="flex items-center gap-2 h-[38px] px-4 border border-[#B5B1B1] rounded-lg hover:bg-gray-50 transition"
                 >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[#171417]">
-                    <path
-                      d="M6.22222 13.3333H9.77778V11.5556H6.22222V13.3333ZM0 2.66667V4.44444H16V2.66667H0ZM2.66667 8.88889H13.3333V7.11111H2.66667V8.88889Z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                  <span className="font-dm-sans text-base leading-[140%] text-[#171417]">
-                    Filter
-                  </span>
+                  Filter
                 </button>
               </div>
 
               <div className="min-h-[420px] flex items-center justify-center bg-white">
                 <AppRatingsTable />
+                {/* Replace with empty state if no ratings */}
+                {/* <EmptyState type="ratings" /> */}
               </div>
             </div>
           </TabsContent>
         </Tabs>
       </main>
 
-      {/* Ratings Full Filter Drawer */}
       <RatingsFilterDrawer
         isOpen={showRatingsFilter}
         onClose={() => setShowRatingsFilter(false)}

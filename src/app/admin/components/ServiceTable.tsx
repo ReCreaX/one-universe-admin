@@ -21,6 +21,18 @@ const ServiceTable: React.FC<ServiceTableProps> = ({ services, activeTab }) => {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [expandedService, setExpandedService] = useState<string | null>(null);
 
+  // --- SAFE DATE FORMATTER ---
+  const formatDate = (value: string | Date) => {
+    const d = new Date(value);
+    return d.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+
   const toggleService = (id: string) => {
     setSelectedServices((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
@@ -135,7 +147,7 @@ const ServiceTable: React.FC<ServiceTableProps> = ({ services, activeTab }) => {
                   {service.title}
                 </td>
                 <td className="py-4 px-6 text-sm text-gray-900">
-                  {service.createdAt}
+                  {formatDate(service.createdAt)}
                 </td>
                 <td className="py-4 px-6">
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full">
@@ -216,7 +228,7 @@ const ServiceTable: React.FC<ServiceTableProps> = ({ services, activeTab }) => {
                       Date submitted:
                     </p>
                     <p className="text-sm font-medium text-gray-900">
-                      {service.createdAt}
+                      {formatDate(service.createdAt)}
                     </p>
                   </div>
                   <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors">

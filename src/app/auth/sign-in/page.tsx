@@ -5,10 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, Suspense } from "react";
 import useToastStore from "@/store/useToastStore";
 
-const SignInPage = () => {
+// Separate component that uses useSearchParams
+function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToastStore();
@@ -291,6 +292,17 @@ const SignInPage = () => {
       )}
     </section>
   );
-};
+}
 
-export default SignInPage;
+// Main component with Suspense wrapper
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <section className="flex items-center justify-center h-full">
+        <div>Loading...</div>
+      </section>
+    }>
+      <SignInForm />
+    </Suspense>
+  );
+}

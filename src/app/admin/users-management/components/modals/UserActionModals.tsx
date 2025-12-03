@@ -81,7 +81,7 @@ export const SendWarningModal: React.FC<SendWarningModalProps> = ({
 
               <div className="flex-1 space-y-3">
                 <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px" }}>
-                  Enter the warning message you'd like to send. It will be
+                  Enter the warning message you&apos;d like to send. It will be
                   delivered as an in-app notification and an email to the user.
                 </p>
                 <label
@@ -202,7 +202,7 @@ export const ReactivateModal: React.FC<BaseModalProps> = ({
                 color: "#454345",
               }}
             >
-              This user's account is currently deactivated. Reactivating will
+              This user&apos;s account is currently deactivated. Reactivating will
               restore their full access to the platform.
             </p>
             <div className="flex justify-end gap-6 mt-auto">
@@ -262,7 +262,7 @@ export const DeactivateModal: React.FC<BaseModalProps> = ({
                   <TriangleAlert size={24} className="text-red-600" />
                 </div>
                 <p className="text-gray-800 text-sm">
-                  You're about to deactivate{" "}
+                  You&apos;re about to deactivate{" "}
                   {userName ? `${userName}'s` : "this user's"} account. They
                   will no longer have access to the platform.
                 </p>
