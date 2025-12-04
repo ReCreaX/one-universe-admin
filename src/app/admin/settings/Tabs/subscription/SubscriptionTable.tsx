@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { MoreVertical, ArrowUpRight } from "lucide-react";
-import SettingsEmptyState from "../../SettingsEmptyState"; // Update path if needed
+import SubscriptionDetailsModal from "./SubscriptionDetailsModal"; 
 
 interface Subscription {
   id: string;
@@ -14,10 +13,9 @@ interface Subscription {
 }
 
 const SubscriptionTable = () => {
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
 
-  // Sample data — replace with real API data later
+  // Sample data
   const subscriptions: Subscription[] = [
     {
       id: "1",
@@ -53,30 +51,18 @@ const SubscriptionTable = () => {
     },
   ];
 
-  const handleActionClick = (id: string, event: React.MouseEvent<HTMLButtonElement>) => {
-    const button = event.currentTarget;
-    const rect = button.getBoundingClientRect();
-
-    const menuWidth = 200;
-    const menuHeight = 100;
-    const padding = 16;
-
-    let left = rect.right - menuWidth + 10;
-    if (left < padding) left = padding;
-
-    let top = rect.bottom + window.scrollY + 8;
-    if (top + menuHeight > window.innerHeight + window.scrollY) {
-      top = rect.top + window.scrollY - menuHeight - 8;
-    }
-
-    setMenuPosition({ top, left });
-    setOpenMenuId(prev => (prev === id ? null : id));
-  };
-
-  const handleViewDetails = (subscription: Subscription) => {
-    alert(`View details for ${subscription.sellerName}`);
-    setOpenMenuId(null);
-    // Later: open modal with full subscription details
+  const handleViewDetails = (sub: Subscription) => {
+    setSelectedSubscription({
+      ...sub,
+      phone: "+23484848848",
+      startDate: "01/06/2025",
+      endDate: sub.endDate,
+      paymentStatus: "Paid",
+      payments: [
+        { date: "01/06/2025", amount: "₦5,000", status: "Paid", transactionId: "TXN123456789" },
+        { date: "01/05/2025", amount: "₦5,000", status: "Paid", transactionId: "TXN987654321" },
+      ],
+    });
   };
 
   const getStatusStyles = (status: Subscription["status"]) => {
@@ -92,12 +78,8 @@ const SubscriptionTable = () => {
     }
   };
 
-  const openSubscription = openMenuId
-    ? subscriptions.find(s => s.id === openMenuId)
-    : null;
-
   if (subscriptions.length === 0) {
-    return <SettingsEmptyState />;
+    return <div className="py-20 text-center text-gray-500">No subscriptions found</div>;
   }
 
   return (
@@ -157,10 +139,10 @@ const SubscriptionTable = () => {
                 </td>
                 <td className="py-[18px] px-[25px]">
                   <button
-                    onClick={(e) => handleActionClick(sub.id, e)}
-                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    onClick={() => handleViewDetails(sub)}
+                    className="font-dm-sans text-sm font-medium text-[#154751] hover:text-[#04171F] underline-offset-2 hover:underline transition-colors"
                   >
-                    <MoreVertical size={20} className="text-[#303237]" />
+                    View Details
                   </button>
                 </td>
               </tr>
@@ -183,12 +165,6 @@ const SubscriptionTable = () => {
                 </h4>
                 <p className="font-dm-sans text-sm text-[#6B6969] mt-1">{sub.email}</p>
               </div>
-              <button
-                onClick={(e) => handleActionClick(sub.id, e)}
-                className="p-2 rounded-lg hover:bg-gray-100"
-              >
-                <MoreVertical size={20} className="text-[#303237]" />
-              </button>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-sm mb-4">
@@ -211,28 +187,24 @@ const SubscriptionTable = () => {
                 <div className="w-2 h-2 rounded-full bg-current" />
                 {sub.status}
               </span>
+
+              <button
+                onClick={() => handleViewDetails(sub)}
+                className="font-dm-sans text-sm font-medium text-[#154751] hover:text-[#04171F] underline-offset-2 hover:underline"
+              >
+                View Details
+              </button>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Action Menu (same style as tickets) */}
-      {openSubscription && (
-        <div
-          className="fixed z-50 bg-white rounded-lg shadow-lg border border-[#E8E3E3] py-2 w-48"
-          style={{ top: menuPosition.top, left: menuPosition.left }}
-        >
-          <button
-            onClick={() => handleViewDetails(openSubscription)}
-            className="w-full px-4 py-2 text-left font-dm-sans text-sm text-[#171417] hover:bg-[#F5F5F5] transition-colors"
-          >
-            View Details
-          </button>
-          <button className="w-full px-4 py-2 text-left font-dm-sans text-sm text-[#171417] hover:bg-[#F5F5F5] transition-colors opacity-50 cursor-not-allowed">
-            Renew Plan (Coming soon)
-          </button>
-        </div>
-      )}
+      {/* Beautiful Modal */}
+      <SubscriptionDetailsModal
+        isOpen={!!selectedSubscription}
+        onClose={() => setSelectedSubscription(null)}
+        subscription={selectedSubscription}
+      />
     </>
   );
 };
