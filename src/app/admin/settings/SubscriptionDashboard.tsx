@@ -1,14 +1,38 @@
-// components/subscription/SubscriptionDashboard.tsx
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Search, Filter, TrendingUp, TrendingDown } from "lucide-react";
-import SubscriptionTable from "./Tabs/subscription/SubscriptionTable"; // Same folder
+import SubscriptionTable from "./Tabs/subscription/SubscriptionTable";
 import SettingsEmptyState from "./SettingsEmptyState";
+import UpdatePlanPricingModal from "./Tabs/pricing/UpdatePricingModal"; // Adjust path if needed
+
+interface Plan {
+  id: string;
+  name: string;
+  description: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  iconColor?: string;
+}
 
 const SubscriptionDashboard = () => {
-  // Simulate data state — replace with real API later
-  const hasSubscriptions = true; // Set to false to see empty state
+  const hasSubscriptions = true; // Simulated data
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Example subscription plan
+  const plan: Plan = {
+    id: "premium-subscription",
+    name: "Premium Subscription Price",
+    description: "Price for premium subscriptions",
+    monthlyPrice: 5000,
+    yearlyPrice: 50000,
+    iconColor: "#154751",
+  };
+
+  const handleUpdatePrice = (planId: string, newMonthlyPrice: number, newYearlyPrice: number) => {
+    console.log("UPDATED PLAN:", planId, newMonthlyPrice, newYearlyPrice);
+    // Connect to backend PATCH request here
+  };
 
   return (
     <div className="w-full space-y-8 px-5 md:px-0">
@@ -78,10 +102,19 @@ const SubscriptionDashboard = () => {
         </div>
       </div>
 
-      {/* === TITLE === */}
-      <h2 className="font-dm-sans font-medium text-xl text-[#171417]">
-        Premium Ranking Subscribers
-      </h2>
+      {/* === TITLE + Update Button === */}
+      <div className="flex items-center justify-between">
+        <h2 className="font-dm-sans font-medium text-xl text-[#171417]">
+          Premium Ranking Subscribers
+        </h2>
+
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center justify-center gap-2 px-6 py-4 rounded-[20px] text-white font-dm-sans font-medium text-[16px] bg-[radial-gradient(50%_50%_at_50%_50%,_#154751_37%,_#04171F_100%)] hover:opacity-90 transition-opacity"
+        >
+          Update Premium Price
+        </button>
+      </div>
 
       {/* === MAIN CONTAINER WITH SEARCH + CONTENT === */}
       <div className="bg-white rounded-t-3xl overflow-hidden">
@@ -112,6 +145,14 @@ const SubscriptionDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* ⭐ THE MODAL */}
+      <UpdatePlanPricingModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        plan={plan}
+        onUpdate={handleUpdatePrice}
+      />
     </div>
   );
 };
