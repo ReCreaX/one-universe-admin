@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { PromotionalOffer } from "@/types/PromotionalOffer";
 import PromotionalEmptyState from "./PromotionalEmptyState";
+import { Eye, Edit2, Trash2 } from "lucide-react";
 
 interface PromotionalOffersTableProps {
   offers: PromotionalOffer[];
@@ -11,7 +12,6 @@ interface PromotionalOffersTableProps {
 const PromotionalOffersTable = ({ offers }: PromotionalOffersTableProps) => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-  const [selectedOffer, setSelectedOffer] = useState<PromotionalOffer | null>(null);
 
   const handleActionClick = (
     offerId: string,
@@ -19,8 +19,8 @@ const PromotionalOffersTable = ({ offers }: PromotionalOffersTableProps) => {
   ) => {
     const button = event.currentTarget;
     const rect = button.getBoundingClientRect();
-    const menuWidth = 206;
-    const menuHeight = 180;
+    const menuWidth = 168;
+    const menuHeight = 176;
     const padding = 16;
 
     let left = rect.right - menuWidth;
@@ -38,8 +38,20 @@ const PromotionalOffersTable = ({ offers }: PromotionalOffersTableProps) => {
     setOpenMenuId(prev => prev === offerId ? null : offerId);
   };
 
-  const openOfferDetail = (offer: PromotionalOffer) => {
-    setSelectedOffer(offer);
+  const handleView = (offer: PromotionalOffer) => {
+    alert(`View offer: ${offer.title}`);
+    setOpenMenuId(null);
+  };
+
+  const handleEdit = (offer: PromotionalOffer) => {
+    alert(`Edit offer: ${offer.title}`);
+    setOpenMenuId(null);
+  };
+
+  const handleDelete = (offer: PromotionalOffer) => {
+    if (confirm(`Delete "${offer.title}"?`)) {
+      alert("Deleted!");
+    }
     setOpenMenuId(null);
   };
 
@@ -98,7 +110,7 @@ const PromotionalOffersTable = ({ offers }: PromotionalOffersTableProps) => {
                         <span className="font-dm-sans text-sm font-medium">{offer.status}</span>
                       </div>
                     </td>
-                    <td className="py-[18px] px-[25px]">
+                    <td className="py-[18px] px-[25px] relative">
                       <button
                         onClick={(e) => handleActionClick(offer.id, e)}
                         className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -109,6 +121,42 @@ const PromotionalOffersTable = ({ offers }: PromotionalOffersTableProps) => {
                           <circle cx="10" cy="15" r="2" fill="currentColor" />
                         </svg>
                       </button>
+
+                      {/* PERFECT FIGMA MENU — 168×176px */}
+                      {openMenuId === offer.id && (
+                        <div
+                          className="fixed w-42 bg-white rounded-[20px] shadow-[0px_8px_29px_0px_#5F5E5E30] border border-[#E5E7EF] overflow-hidden z-50"
+                          style={{ top: menuPosition.top, left: menuPosition.left }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {/* View Offer */}
+                          <button
+                            onClick={() => handleView(offer)}
+                            className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
+                          >
+                            <Eye className="w-4.5 h-4.5 text-[#454345]" />
+                            <span className="font-dm-sans text-base text-[#454345]">View Offer</span>
+                          </button>
+
+                          {/* Edit Offer */}
+                          <button
+                            onClick={() => handleEdit(offer)}
+                            className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
+                          >
+                            <Edit2 className="w-4.5 h-4.5 text-[#454345]" />
+                            <span className="font-dm-sans text-base text-[#454345]">Edit Offer</span>
+                          </button>
+
+                          {/* Delete Offer */}
+                          <button
+                            onClick={() => handleDelete(offer)}
+                            className="w-full flex items-center gap-2.5 px-6 py-4.5 hover:bg-[#FAFAFA] transition text-red-600"
+                          >
+                            <Trash2 className="w-4.5 h-4.5 text-red-600" />
+                            <span className="font-dm-sans text-base text-red-600">Delete Offer</span>
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -116,10 +164,10 @@ const PromotionalOffersTable = ({ offers }: PromotionalOffersTableProps) => {
             </table>
           </div>
 
-          {/* Mobile Cards */}
+          {/* Mobile Cards — Same menu */}
           <div className="md:hidden space-y-4 p-4">
             {offers.map((offer) => (
-              <div key={offer.id} className="bg-white border border-[#E8E3E3] rounded-lg p-4 shadow-sm">
+              <div key={offer.id} className="bg-white border border-[#E8E3E3] rounded-lg p-4 shadow-sm relative">
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <p className="font-dm-sans font-medium text-base text-[#303237] mb-1">{offer.title}</p>
@@ -151,6 +199,28 @@ const PromotionalOffersTable = ({ offers }: PromotionalOffersTableProps) => {
                   <p className="font-dm-sans text-[#454345]"><span className="font-medium text-[#303237]">Ends:</span> {offer.endDate}</p>
                   <p className="font-dm-sans text-[#454345]"><span className="font-medium text-[#303237]">Redeemed:</span> {offer.redemptions.toLocaleString()}</p>
                 </div>
+
+                {/* SAME MENU IN MOBILE */}
+                {openMenuId === offer.id && (
+                  <div
+                    className="fixed w-42 bg-white rounded-[20px] shadow-[0px_8px_29px_0px_#5F5E5E30] border border-[#E5E7EF] overflow-hidden z-50"
+                    style={{ top: menuPosition.top, left: menuPosition.left }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button onClick={() => handleView(offer)} className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition">
+                      <Eye className="w-4.5 h-4.5 text-[#454345]" />
+                      <span className="font-dm-sans text-base text-[#454345]">View Offer</span>
+                    </button>
+                    <button onClick={() => handleEdit(offer)} className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition">
+                      <Edit2 className="w-4.5 h-4.5 text-[#454345]" />
+                      <span className="font-dm-sans text-base text-[#454345]">Edit Offer</span>
+                    </button>
+                    <button onClick={() => handleDelete(offer)} className="w-full flex items-center gap-2.5 px-6 py-4.5 hover:bg-[#FAFAFA] transition text-red-600">
+                      <Trash2 className="w-4.5 h-4.5 text-red-600" />
+                      <span className="font-dm-sans text-base text-red-600">Delete Offer</span>
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

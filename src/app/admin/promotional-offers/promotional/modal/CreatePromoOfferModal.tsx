@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { ChevronDown, X } from "lucide-react";
+import PromotionPreviewModal from "./PromotionPreviewModal"; // ← Your imported preview
 
 interface CreatePromoOfferModalProps {
   isOpen: boolean;
@@ -9,6 +10,8 @@ interface CreatePromoOfferModalProps {
 }
 
 export default function CreatePromoOfferModal({ isOpen, onClose }: CreatePromoOfferModalProps) {
+  const [showPreview, setShowPreview] = useState(false);
+
   const [formData, setFormData] = useState({
     offerTitle: "",
     offerType: "",
@@ -41,7 +44,10 @@ export default function CreatePromoOfferModal({ isOpen, onClose }: CreatePromoOf
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose}></div>
+      {/* Backdrop */}
+      <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
+
+      {/* Main Modal */}
       <div className="fixed inset-0 flex items-center justify-center p-4 z-50 pointer-events-none">
         <div className="bg-white rounded-2xl w-full max-w-[760px] max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto">
           
@@ -157,32 +163,25 @@ export default function CreatePromoOfferModal({ isOpen, onClose }: CreatePromoOf
                   <label className="font-dm-sans font-medium text-base text-[#171417]">
                     Start Date <span className="text-[#D84040]">*</span>
                   </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      name="startDate"
-                      value={formData.startDate}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-[#B2B2B4] rounded-lg font-dm-sans text-base focus:outline-none"
-                    />
-                    <ChevronDown size={20} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#B2B2B4] pointer-events-none" />
-                  </div>
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={formData.startDate}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-[#B2B2B4] rounded-lg font-dm-sans text-base focus:outline-none"
+                  />
                 </div>
-
                 <div className="space-y-2">
                   <label className="font-dm-sans font-medium text-base text-[#171417]">
                     End Date <span className="text-[#D84040]">*</span>
                   </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      name="endDate"
-                      value={formData.endDate}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-[#B2B2B4] rounded-lg font-dm-sans text-base focus:outline-none"
-                    />
-                    <ChevronDown size={20} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#B2B2B4] pointer-events-none" />
-                  </div>
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={formData.endDate}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-[#B2B2B4] rounded-lg font-dm-sans text-base focus:outline-none"
+                  />
                 </div>
               </div>
 
@@ -216,7 +215,6 @@ export default function CreatePromoOfferModal({ isOpen, onClose }: CreatePromoOf
                     className="w-full px-4 py-3 border border-[#B2B2B4] rounded-lg font-dm-sans text-base placeholder-[#B7B6B7] focus:outline-none focus:border-[#154751]"
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="font-dm-sans font-medium text-base text-[#171417]">
                     Max Total Redemptions <span className="text-[#D84040]">*</span>
@@ -233,24 +231,31 @@ export default function CreatePromoOfferModal({ isOpen, onClose }: CreatePromoOf
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col md:flex-row gap-4 md:gap-8 mt-6 md:mt-8 pt-4 border-t border-[#E8E3E3]">
+            {/* Action Buttons — ALL ENABLED */}
+            <div className="flex flex-col md:flex-row gap-4 md:gap-8 mt-8 pt-6 border-t border-[#E8E3E3] px-6 md:px-8 pb-6">
+              {/* PREVIEW — NOW WORKING */}
               <button
-                className="px-4 md:px-6 py-3 md:py-4 rounded-full font-dm-sans font-medium text-sm md:text-base text-[#171417] border border-gray-300 bg-white hover:bg-gray-50 transition opacity-40 cursor-not-allowed flex-1 md:flex-none"
-                disabled
+                type="button"
+                onClick={() => setShowPreview(true)}
+                className="px-6 py-4 rounded-full font-dm-sans font-medium text-base text-[#171417] border border-gray-300 bg-white hover:bg-gray-50 transition"
               >
                 Preview
               </button>
+
               <button
-                className="px-4 md:px-6 py-3 md:py-4 rounded-full font-dm-sans font-medium text-sm md:text-base text-[#171417] bg-white hover:bg-gray-50 transition opacity-40 cursor-not-allowed flex-1 md:flex-none"
+                type="button"
+                className="px-6 py-4 rounded-full font-dm-sans font-medium text-base text-[#171417] bg-white hover:bg-gray-50 transition"
                 style={{ border: "2px solid #154751" }}
-                disabled
               >
                 Save as Draft
               </button>
+
               <button
-                className="px-4 md:px-6 py-3 md:py-4 rounded-full font-dm-sans font-medium text-sm md:text-base text-[#FFFEFE] bg-[#ACC5CF] hover:bg-opacity-90 transition cursor-not-allowed flex-1 md:flex-none"
-                disabled
+                type="button"
+                className="px-6 py-4 rounded-full font-dm-sans font-medium text-base text-white"
+                style={{
+                  background: 'radial-gradient(50% 50% at 50% 50%, #154751 37%, #04171F 100%)'
+                }}
               >
                 Publish Offer
               </button>
@@ -258,6 +263,9 @@ export default function CreatePromoOfferModal({ isOpen, onClose }: CreatePromoOf
           </div>
         </div>
       </div>
+
+      {/* YOUR IMPORTED PREVIEW MODAL */}
+      <PromotionPreviewModal isOpen={showPreview} onClose={() => setShowPreview(false)} />
     </>
   );
 }
