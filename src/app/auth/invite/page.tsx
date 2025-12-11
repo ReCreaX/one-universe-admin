@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
 import {
   InputOTP,
@@ -10,7 +10,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { AlertCircle, CheckCircle } from "lucide-react";
 
-const InviteAdminPage = () => {
+// Separate component that uses useSearchParams
+function InviteAdminContent() {
   const [otp, setOtp] = useState<string>("");
   const [isLinkValid, setIsLinkValid] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -23,7 +24,7 @@ const InviteAdminPage = () => {
   // Verify token on mount
   useEffect(() => {
     if (!token) {
-      setIsLinkValid(true);
+      setIsLinkValid(false);
     }
     // Optionally verify token validity with backend
     // verifyTokenValidity(token);
@@ -216,6 +217,19 @@ const InviteAdminPage = () => {
         )}
       </aside>
     </section>
+  );
+}
+
+// Main page component with Suspense boundary
+const InviteAdminPage = () => {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-full">
+        <div className="w-8 h-8 border-4 border-[#154751] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <InviteAdminContent />
+    </Suspense>
   );
 };
 

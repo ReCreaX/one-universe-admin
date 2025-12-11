@@ -6,13 +6,13 @@ import { PermissionData, InviteAdminPayload } from '@/types/admin';
 interface InviteNewAdminProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (data: any) => void;
+  onInvite?: (data: any) => void;
 }
 
 const InviteNewAdmin: React.FC<InviteNewAdminProps> = ({
   isOpen,
   onClose,
-  onSuccess,
+  onInvite,
 }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'permissions'>('profile');
   const [fullName, setFullName] = useState('');
@@ -105,7 +105,7 @@ const InviteNewAdmin: React.FC<InviteNewAdminProps> = ({
         setSelectedRole('');
         setSelectedPermissions([]);
         setActiveTab('profile');
-        onSuccess?.(response);
+        onInvite?.(response);
         onClose();
       }, 1500);
     } catch (err) {
