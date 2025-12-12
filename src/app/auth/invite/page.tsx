@@ -61,7 +61,7 @@ function InviteAdminContent() {
 
         // Redirect to change password page after 1.5 seconds
         setTimeout(() => {
-          router.push(`/auth/setup-password?email=${email}&code=${code}`);
+          router.push(`/auth/setup?email=${email}&code=${code}`);
         }, 1500);
       } catch (error) {
         console.error("Verification error:", error);
