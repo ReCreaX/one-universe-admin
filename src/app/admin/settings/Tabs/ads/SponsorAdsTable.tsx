@@ -1,92 +1,67 @@
-// ./Tabs/ads/SponsorAdsTable.tsx
 "use client";
 
 import React, { useState, useMemo } from "react";
 import AdsSubscriberDetailsModal from "./AdsSubscriberDetailsModal";
+import { SponsorAd, Pagination } from "@/store/sponsorAdsStore";
 import { SponsorAdsFilterState } from "../../components/filters/SponsorAdsFilter";
 
-interface SponsorAd {
-  id: string;
-  sellerName: string;
-  businessName: string;
-  email: string;
-  endDate: string;
-  planType: string;
-  status: "Active" | "Expired" | "Suspended";
-  paymentStatus?: "Paid" | "Pending" | "Failed" | "Refunded";
-  startDate?: string;
-}
-
 interface SponsorAdsTableProps {
+  ads: SponsorAd[];
   filters?: SponsorAdsFilterState;
+  pagination?: Pagination | null;
+  loading?: boolean;
+  onPageChange?: (page: number) => void;
 }
 
-const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({ filters = {} }) => {
+const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({ 
+  ads, 
+  filters = {}, 
+  pagination = null,
+  loading = false,
+  onPageChange = () => {},
+}) => {
   const [selectedSubscriber, setSelectedSubscriber] = useState<any>(null);
 
-  // Mock data with extra fields for filtering
-  const rawAds: SponsorAd[] = [
-    {
-      id: "1",
-      sellerName: "Chioma Eze",
-      businessName: "Chioma Beauty Empire",
-      email: "chioma@brand.ng",
-      endDate: "2025-12-30",
-      planType: "Premium Ad Slot",
-      status: "Active",
-      paymentStatus: "Paid",
-      startDate: "2025-06-01",
-    },
-    {
-      id: "2",
-      sellerName: "TechMart NG",
-      businessName: "TechMart Nigeria Ltd",
-      email: "ads@techmart.com",
-      endDate: "2026-01-15",
-      planType: "Featured Banner",
-      status: "Active",
-      paymentStatus: "Paid",
-      startDate: "2025-07-10",
-    },
-    {
-      id: "3",
-      sellerName: "FashionHub",
-      businessName: "FashionHub Co",
-      email: "sponsor@fashionhub.co",
-      endDate: "2025-10-01",
-      planType: "Premium Ad Slot",
-      status: "Expired",
-      paymentStatus: "Failed",
-      startDate: "2025-04-01",
-    },
-    {
-      id: "4",
-      sellerName: "Foodie Palace",
-      businessName: "Foodie Palace Ltd",
-      email: "ads@foodiepalace.com",
-      endDate: "2025-11-20",
-      planType: "Lifetime",
-      status: "Suspended",
-      paymentStatus: "Refunded",
-      startDate: "2025-03-15",
-    },
-  ];
+  // Format ads data for display
+  const formattedAds = useMemo(() => {
+    return ads.map((ad) => {
+      const isSeller = ad.user.role === "SELLER" || 
+        ad.user.userRoles.some(ur => ur.role.name === "SELLER");
+      
+      return {
+        ...ad,
+        sellerName: ad.user.fullName,
+        email: ad.user.email,
+        phone: ad.user.phone,
+        endDate: new Date(ad.endDate).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+        startDate: new Date(ad.startDate).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+        planType: ad.plan.name,
+        statusLabel: ad.status === 'ACTIVE' ? 'Active' : 
+                    ad.status === 'EXPIRED' ? 'Expired' : 
+                    ad.status === 'SUSPENDED' ? 'Suspended' : ad.status,
+        isSeller,
+      };
+    });
+  }, [ads]);
 
   // Filter logic using useMemo for performance
-  const ads = useMemo(() => {
-    return rawAds.filter((ad) => {
-      // Payment Status filter
-      if (filters.paymentStatus && ad.paymentStatus !== filters.paymentStatus) {
+  const filteredAds = useMemo(() => {
+    return formattedAds.filter((ad) => {
+      // Subscription Status filter
+      if (filters.subscriptionStatus && ad.statusLabel !== filters.subscriptionStatus) {
         return false;
       }
 
       // Plan Type filter
       if (filters.planType && !ad.planType.toLowerCase().includes(filters.planType.toLowerCase())) {
-        return false;
-      }
-
-      // Subscription Status filter
-      if (filters.subscriptionStatus && ad.status !== filters.subscriptionStatus) {
         return false;
       }
 
@@ -99,21 +74,53 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({ filters = {} }) => {
 
       return true;
     });
-  }, [filters, rawAds]);
+  }, [formattedAds, filters]);
 
-  const handleViewDetails = (ad: SponsorAd) => {
+  const handleViewDetails = (ad: typeof formattedAds[0]) => {
+    // Map transaction data from backend if available, otherwise empty array
+    const payments = ad.transaction ? 
+      Array.isArray(ad.transaction) ? 
+        ad.transaction.map((txn: any) => ({
+          date: new Date(txn.createdAt).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          }),
+          amount: `₦${txn.amount.toLocaleString()}`,
+          status: txn.status === 'PAID' ? 'Paid' : txn.status === 'PENDING' ? 'Pending' : 'Failed',
+          transactionId: txn.reference || txn.id,
+        }))
+      : [
+        // Single transaction object
+        {
+          date: new Date(ad.transaction.createdAt).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          }),
+          amount: `₦${ad.transaction.amount.toLocaleString()}`,
+          status: ad.transaction.status === 'PAID' ? 'Paid' : ad.transaction.status === 'PENDING' ? 'Pending' : 'Failed',
+          transactionId: ad.transaction.reference || ad.transaction.id,
+        }
+      ]
+    : [];
+
     setSelectedSubscriber({
-      ...ad,
-      phone: "+2349012345678",
-      payments: [
-        { date: "01/06/2025", amount: "₦15,000", status: "Paid", transactionId: "TXN8877665544" },
-        { date: "01/05/2025", amount: "₦15,000", status: "Failed", transactionId: "TXN1122334455" },
-        { date: "01/04/2025", amount: "₦15,000", status: "Paid", transactionId: "TXN9988776655" },
-      ],
+      id: ad.id,
+      userId: ad.userId || ad.user.id,
+      sellerName: ad.sellerName,
+      businessName: ad.sellerName, // Using seller name as business name (adjust as needed)
+      email: ad.email,
+      phone: ad.phone,
+      planType: ad.planType,
+      startDate: ad.startDate,
+      endDate: ad.endDate,
+      status: ad.statusLabel,
+      payments: payments,
     });
   };
 
-  const getStatusColor = (status: SponsorAd["status"]) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "Active": return "bg-[#D7FFE9] text-[#00AB47]";
       case "Expired": return "bg-[#FFE6E6] text-[#D84040]";
@@ -122,7 +129,7 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({ filters = {} }) => {
     }
   };
 
-  if (ads.length === 0) {
+  if (filteredAds.length === 0) {
     return (
       <div className="py-20 text-center">
         <p className="text-[#757575] font-dm-sans text-lg">
@@ -150,25 +157,19 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({ filters = {} }) => {
             </tr>
           </thead>
           <tbody>
-            {ads.map((ad) => (
+            {filteredAds.map((ad) => (
               <tr
                 key={ad.id}
                 className="bg-white border-b border-[#E5E5E5] hover:bg-[#FAFAFA] transition-colors"
               >
                 <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">{ad.sellerName}</td>
                 <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">{ad.email}</td>
-                <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">
-                  {new Date(ad.endDate).toLocaleDateString("en-GB", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </td>
+                <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">{ad.endDate}</td>
                 <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">{ad.planType}</td>
                 <td className="py-[18px] px-[25px]">
-                  <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(ad.status)}`}>
+                  <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(ad.statusLabel)}`}>
                     <div className="w-2 h-2 rounded-full bg-current" />
-                    {ad.status}
+                    {ad.statusLabel}
                   </span>
                 </td>
                 <td className="py-[18px] px-[25px]">
@@ -187,7 +188,7 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({ filters = {} }) => {
 
       {/* Mobile Cards */}
       <div className="md:hidden space-y-4 p-4">
-        {ads.map((ad) => (
+        {filteredAds.map((ad) => (
           <div key={ad.id} className="bg-white border border-[#E8E3E3] rounded-lg p-5 shadow-sm">
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -199,9 +200,7 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({ filters = {} }) => {
             <div className="grid grid-cols-2 gap-4 text-sm mb-4">
               <div>
                 <p className="text-[#6B6969]">End Date</p>
-                <p className="font-medium text-[#171417] mt-1">
-                  {new Date(ad.endDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                </p>
+                <p className="font-medium text-[#171417] mt-1">{ad.endDate}</p>
               </div>
               <div>
                 <p className="text-[#6B6969]">Ad Type</p>
@@ -210,9 +209,9 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({ filters = {} }) => {
             </div>
 
             <div className="flex items-center justify-between">
-              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(ad.status)}`}>
+              <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(ad.statusLabel)}`}>
                 <div className="w-2 h-2 rounded-full bg-current" />
-                {ad.status}
+                {ad.statusLabel}
               </span>
 
               <button
@@ -225,6 +224,41 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({ filters = {} }) => {
           </div>
         ))}
       </div>
+
+      {/* Pagination */}
+      {pagination && pagination.pages > 1 && (
+        <div className="flex justify-center items-center gap-3 px-6 py-6 border-t border-[#E5E5E5] bg-white">
+          <button
+            onClick={() => {
+              if (pagination.page > 1 && !loading) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                onPageChange(pagination.page - 1);
+              }
+            }}
+            disabled={pagination.page === 1 || loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#E5E5E5] text-[#171417] font-dm-sans font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#FAFAFA] transition-colors"
+          >
+            Previous
+          </button>
+
+          <span className="px-4 py-2 text-[#646264] font-dm-sans font-medium">
+            Page {pagination.page} of {pagination.pages}
+          </span>
+
+          <button
+            onClick={() => {
+              if (pagination.page < pagination.pages && !loading) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                onPageChange(pagination.page + 1);
+              }
+            }}
+            disabled={pagination.page === pagination.pages || loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#E5E5E5] text-[#171417] font-dm-sans font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#FAFAFA] transition-colors"
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Modal */}
       <AdsSubscriberDetailsModal

@@ -1,14 +1,16 @@
 "use client";
 
-import React from "react";
-import { X, User, CheckCircle, XCircle } from "lucide-react";
+import React, { useState } from "react";
+import { X, User, CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react";
 import Image from "next/image";
+import { useSession } from "next-auth/react";
 
 interface AdsSubscriberDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   subscriber: {
     id: string;
+    userId: string;
     sellerName: string;
     businessName: string;
     email: string;
@@ -24,6 +26,7 @@ interface AdsSubscriberDetailsModalProps {
       transactionId: string;
     }>;
   };
+  onReminderSent?: () => void;
 }
 
 const EmptyState = () => (
@@ -51,7 +54,13 @@ const AdsSubscriberDetailsModal: React.FC<AdsSubscriberDetailsModalProps> = ({
   isOpen,
   onClose,
   subscriber,
+  onReminderSent,
 }) => {
+  const { data: session } = useSession();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
   if (!isOpen) return null;
 
   const payments = subscriber.payments || [
@@ -90,6 +99,55 @@ const AdsSubscriberDetailsModal: React.FC<AdsSubscriberDetailsModalProps> = ({
         Failed
       </span>
     );
+  };
+
+  const handleSendReminder = async () => {
+    if (!subscriber.userId) {
+      setError("User ID not found");
+      return;
+    }
+
+    if (!session?.accessToken) {
+      setError("You are not authenticated");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const response = await fetch(
+        `https://one-universe-de5673cf0d65.herokuapp.com/api/v1/subscription/${subscriber.userId}/notify-expired`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to send reminder");
+      }
+
+      const data = await response.json();
+      console.log("✅ Reminder sent successfully:", data);
+
+      setSuccess(true);
+      onReminderSent?.();
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to send reminder";
+      setError(errorMessage);
+      console.error("❌ Error sending reminder:", errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -197,10 +255,38 @@ const AdsSubscriberDetailsModal: React.FC<AdsSubscriberDetailsModalProps> = ({
               {/* Horizontal Divider - Mobile Only */}
               <div className="md:hidden -mx-6 h-px bg-[#E8E3E3]" />
 
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+                  <AlertCircle className="text-red-500" size={20} />
+                  <p className="text-red-700 text-sm font-dm-sans">{error}</p>
+                </div>
+              )}
+
+              {/* Success Message */}
+              {success && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+                  <CheckCircle className="text-green-500" size={20} />
+                  <p className="text-green-700 text-sm font-dm-sans">Reminder sent successfully!</p>
+                </div>
+              )}
+
               {/* Send Reminder Button */}
               <div className="flex justify-center md:justify-end">
-                <button className="px-8 py-3 bg-gradient-to-r from-[#154751] to-[#04171F] text-white font-dm-sans font-medium text-base rounded-full hover:shadow-xl transition-all active:scale-95">
-                  Send Reminder
+                <button
+                  onClick={handleSendReminder}
+                  disabled={loading}
+                  className={`px-8 py-3 text-white font-dm-sans font-medium text-base rounded-full hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
+                    loading ? "opacity-75" : ""
+                  }`}
+                  style={{
+                    background: loading
+                      ? "linear-gradient(0deg, #ACC5CF, #ACC5CF)"
+                      : "linear-gradient(to right, #154751, #04171F)",
+                  }}
+                >
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {loading ? "Sending..." : "Send Reminder"}
                 </button>
               </div>
             </div>

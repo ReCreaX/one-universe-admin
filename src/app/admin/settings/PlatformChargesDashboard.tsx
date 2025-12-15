@@ -24,28 +24,19 @@ const Toast: React.FC<ToastProps> = ({ type, title, message, onClose }) => {
   };
 
   return (
-    <div
-      className={`fixed inset-0 z-50 flex items-start justify-center pt-20 pointer-events-none`}
-    >
-      {/* Transparent + Blur Backdrop (only behind toast) */}
-      <div className="absolute inset-0 -z-10 bg-transparent" />
-
-      <div
-        className={`pointer-events-auto w-[90%] max-w-[473px] bg-white rounded-lg shadow-2xl ${borders[type]} animate-in slide-in-from-top-2 fade-in duration-300`}
-      >
-        <div className="flex gap-4 px-5 py-4">
-          {icons[type]}
-          <div className="flex-1">
-            <h4 className="font-dm-sans font-bold text-base text-[#06070E]">{title}</h4>
-            <p className="font-dm-sans text-sm text-[#454345] mt-1 leading-tight">{message}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-[#B2B2B4] hover:text-[#171417] transition-colors"
-          >
-            <X size={20} />
-          </button>
+    <div className={`fixed top-6 right-6 z-[9999] w-[90%] max-w-[473px] bg-white rounded-lg shadow-2xl ${borders[type]} animate-in slide-in-from-top-2 fade-in duration-300`}>
+      <div className="flex gap-4 px-5 py-4">
+        {icons[type]}
+        <div className="flex-1">
+          <h4 className="font-dm-sans font-bold text-base text-[#06070E]">{title}</h4>
+          <p className="font-dm-sans text-sm text-[#454345] mt-1 leading-tight">{message}</p>
         </div>
+        <button
+          onClick={onClose}
+          className="text-[#B2B2B4] hover:text-[#171417] transition-colors flex-shrink-0"
+        >
+          <X size={20} />
+        </button>
       </div>
     </div>
   );
@@ -152,7 +143,7 @@ const PlatformChargesDashboard = () => {
         </div>
       </div>
 
-      {/* Toast with Transparent Background */}
+      {/* Toast at Top Right */}
       {toast && <Toast {...toast} />}
     </>
   );

@@ -1,71 +1,103 @@
 "use client";
 
-import React, { useState } from "react";
-import SubscriptionDetailsModal from "./SubscriptionDetailsModal"; 
+import React, { useState, useMemo } from "react";
+import SubscriptionDetailsModal from "./SubscriptionDetailsModal";
+import { Subscription, Pagination } from "@/store/subscriptionStore";
 
-interface Subscription {
-  id: string;
-  sellerName: string;
-  email: string;
-  endDate: string;
-  planType: string;
-  status: "Active" | "Expired" | "Suspended";
+interface SubscriptionTableProps {
+  subscriptions: Subscription[];
+  pagination?: Pagination | null;
+  loading?: boolean;
+  onPageChange?: (page: number) => void;
 }
 
-const SubscriptionTable = () => {
+const SubscriptionTable: React.FC<SubscriptionTableProps> = ({ 
+  subscriptions,
+  pagination = null,
+  loading = false,
+  onPageChange = () => {},
+}) => {
   const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
 
-  // Sample data
-  const subscriptions: Subscription[] = [
-    {
-      id: "1",
-      sellerName: "Tomi Dosunmu",
-      email: "tomi@example.com",
-      endDate: "25 Dec 2025",
-      planType: "Premium Pro",
-      status: "Active",
-    },
-    {
-      id: "2",
-      sellerName: "Sarah Johnson",
-      email: "sarah@shop.com",
-      endDate: "10 Nov 2025",
-      planType: "Standard Plus",
-      status: "Active",
-    },
-    {
-      id: "3",
-      sellerName: "Mike Ade",
-      email: "mikeade@gmail.com",
-      endDate: "05 Oct 2025",
-      planType: "Premium Pro",
-      status: "Expired",
-    },
-    {
-      id: "4",
-      sellerName: "Grace Okon",
-      email: "grace.okon@business.ng",
-      endDate: "18 Jan 2026",
-      planType: "Enterprise",
-      status: "Suspended",
-    },
-  ];
+  // Format subscription data for display
+  const formattedSubscriptions = useMemo(() => {
+    return subscriptions.map((sub) => {
+      const isSeller = sub.user.role === "SELLER" || 
+        sub.user.userRoles.some(ur => ur.role.name === "SELLER");
+      
+      return {
+        ...sub,
+        sellerName: sub.user.fullName,
+        email: sub.user.email,
+        phone: sub.user.phone,
+        endDate: new Date(sub.endDate).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+        startDate: new Date(sub.startDate).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+        planType: sub.plan.name,
+        statusLabel: sub.status === 'ACTIVE' ? 'Active' : 
+                    sub.status === 'EXPIRED' ? 'Expired' : 
+                    sub.status === 'SUSPENDED' ? 'Suspended' : sub.status,
+        isSeller,
+      };
+    });
+  }, [subscriptions]);
 
-  const handleViewDetails = (sub: Subscription) => {
+  const handleViewDetails = (sub: typeof formattedSubscriptions[0]) => {
+    // Map transaction data from backend if available, otherwise empty array
+    const payments = sub.transaction ? 
+      Array.isArray(sub.transaction) ? 
+        sub.transaction.map((txn: any) => ({
+          date: new Date(txn.createdAt).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          }),
+          amount: `₦${txn.amount.toLocaleString()}`,
+          status: txn.status === 'PAID' ? 'Paid' : txn.status === 'PENDING' ? 'Pending' : txn.status,
+          transactionId: txn.reference || txn.id,
+        }))
+      : [
+        // Single transaction object
+        {
+          date: new Date(sub.transaction.createdAt).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          }),
+          amount: `₦${sub.transaction.amount.toLocaleString()}`,
+          status: sub.transaction.status === 'PAID' ? 'Paid' : sub.transaction.status === 'PENDING' ? 'Pending' : sub.transaction.status,
+          transactionId: sub.transaction.reference || sub.transaction.id,
+        }
+      ]
+    : [];
+
+    // Determine overall payment status from transactions
+    const paymentStatus = payments.length > 0 
+      ? payments.some((p: any) => p.status === 'Paid') ? 'Paid' : 'Pending'
+      : 'Pending';
+
     setSelectedSubscription({
-      ...sub,
-      phone: "+23484848848",
-      startDate: "01/06/2025",
+      id: sub.id,
+      sellerName: sub.sellerName,
+      email: sub.email,
+      phone: sub.phone,
+      planType: sub.planType,
+      startDate: sub.startDate,
       endDate: sub.endDate,
-      paymentStatus: "Paid",
-      payments: [
-        { date: "01/06/2025", amount: "₦5,000", status: "Paid", transactionId: "TXN123456789" },
-        { date: "01/05/2025", amount: "₦5,000", status: "Paid", transactionId: "TXN987654321" },
-      ],
+      paymentStatus: paymentStatus,
+      status: sub.statusLabel,
+      payments: payments,
     });
   };
 
-  const getStatusStyles = (status: Subscription["status"]) => {
+  const getStatusStyles = (status: string) => {
     switch (status) {
       case "Active":
         return "bg-[#D7FFE9] text-[#00AB47]";
@@ -78,9 +110,22 @@ const SubscriptionTable = () => {
     }
   };
 
-  if (subscriptions.length === 0) {
+  if (formattedSubscriptions.length === 0) {
     return <div className="py-20 text-center text-gray-500">No subscriptions found</div>;
   }
+
+  // Props for Pagination
+  const paginationProps = {
+    currentPage: pagination?.page || 1,
+    totalPages: pagination?.page || 1,
+    onPageChange: (page: number) => {
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Trigger fetch with new page
+      if (onPageChange) onPageChange(page);
+    },
+    isLoading: loading,
+  };
 
   return (
     <>
@@ -110,7 +155,7 @@ const SubscriptionTable = () => {
             </tr>
           </thead>
           <tbody>
-            {subscriptions.map((sub) => (
+            {formattedSubscriptions.map((sub) => (
               <tr
                 key={sub.id}
                 className="bg-white border-b border-[#E5E5E5] hover:bg-[#FAFAFA] transition-colors"
@@ -130,11 +175,11 @@ const SubscriptionTable = () => {
                 <td className="py-[18px] px-[25px]">
                   <span
                     className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${getStatusStyles(
-                      sub.status
+                      sub.statusLabel
                     )}`}
                   >
                     <div className="w-2 h-2 rounded-full bg-current flex-shrink-0" />
-                    {sub.status}
+                    {sub.statusLabel}
                   </span>
                 </td>
                 <td className="py-[18px] px-[25px]">
@@ -153,7 +198,7 @@ const SubscriptionTable = () => {
 
       {/* Mobile Cards */}
       <div className="md:hidden space-y-4 p-4">
-        {subscriptions.map((sub) => (
+        {formattedSubscriptions.map((sub) => (
           <div
             key={sub.id}
             className="bg-white border border-[#E8E3E3] rounded-lg p-4 sm:p-5 shadow-sm"
@@ -181,11 +226,11 @@ const SubscriptionTable = () => {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <span
                 className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium w-fit ${getStatusStyles(
-                  sub.status
+                  sub.statusLabel
                 )}`}
               >
                 <div className="w-2 h-2 rounded-full bg-current flex-shrink-0" />
-                {sub.status}
+                {sub.statusLabel}
               </span>
 
               <button
@@ -198,6 +243,41 @@ const SubscriptionTable = () => {
           </div>
         ))}
       </div>
+
+      {/* Pagination */}
+      {pagination && pagination.page > 1 && (
+        <div className="flex justify-center items-center gap-3 px-6 py-6 border-t border-[#E5E5E5] bg-white">
+          <button
+            onClick={() => {
+              if (pagination.page > 1 && !loading) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                onPageChange(pagination.page - 1);
+              }
+            }}
+            disabled={pagination.page === 1 || loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#E5E5E5] text-[#171417] font-dm-sans font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#FAFAFA] transition-colors"
+          >
+            Previous
+          </button>
+
+          <span className="px-4 py-2 text-[#646264] font-dm-sans font-medium">
+            Page {pagination.page} of {pagination.page}
+          </span>
+
+          <button
+            onClick={() => {
+              if (pagination.page < pagination.page && !loading) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                onPageChange(pagination.page + 1);
+              }
+            }}
+            disabled={pagination.page === pagination.page || loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#E5E5E5] text-[#171417] font-dm-sans font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#FAFAFA] transition-colors"
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Beautiful Modal */}
       <SubscriptionDetailsModal

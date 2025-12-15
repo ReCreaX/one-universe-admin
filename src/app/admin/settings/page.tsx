@@ -18,10 +18,11 @@ import { useSession } from "next-auth/react";
 import { useProfileStore } from "@/store/profileStore";
 import authService from "@/services/authService";
 
-// Import all dashboards
+// Import all dashboards and notification tab
 import SubscriptionDashboard from "./SubscriptionDashboard";
 import SponsorAdsDashboard from "./SponsorAdsDashboard";
 import PlatformChargesDashboard from "./PlatformChargesDashboard";
+import NotificationTab from "./Tabs/NotificationTab";
 
 // ============================================================================
 // TOAST NOTIFICATION COMPONENT
@@ -89,95 +90,6 @@ const ToastContainer: React.FC<{ toasts: Toast[]; onRemove: (id: string) => void
   );
 };
 
-// ============================================================================
-// TOGGLE SWITCH COMPONENT
-// ============================================================================
-const ToggleSwitch: React.FC<{ enabled: boolean; onToggle: () => void }> = ({
-  enabled,
-  onToggle,
-}) => (
-  <button
-    onClick={onToggle}
-    className="relative w-[42px] h-[24px] rounded-full transition-colors"
-    style={{
-      background: enabled
-        ? "linear-gradient(to right, #154751, #04171F)"
-        : "#E3E5E5",
-    }}
-  >
-    <div
-      className="absolute top-[2px] w-[20px] h-[20px] rounded-full bg-white shadow-sm transition-transform duration-300"
-      style={{ transform: enabled ? "translateX(20px)" : "translateX(2px)" }}
-    />
-  </button>
-);
-
-// ============================================================================
-// NOTIFICATION ROW COMPONENT
-// ============================================================================
-const NotificationRow: React.FC<{ label: string }> = ({ label }) => {
-  const [email, setEmail] = useState(false);
-  const [inApp, setInApp] = useState(false);
-
-  return (
-    <div className="flex items-center justify-between py-4 md:py-0 md:h-[58px]">
-      <span className="font-dm-sans text-sm md:text-base leading-[140%] text-[#6B6969] flex-1 md:w-[200px]">
-        {label}
-      </span>
-      <div className="flex gap-8 md:gap-[150px]">
-        <div className="w-[56px] flex justify-center">
-          <ToggleSwitch enabled={email} onToggle={() => setEmail(!email)} />
-        </div>
-        <div className="w-[56px] flex justify-center">
-          <ToggleSwitch enabled={inApp} onToggle={() => setInApp(!inApp)} />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ============================================================================
-// NOTIFICATION TAB COMPONENT
-// ============================================================================
-const NotificationTab = () => {
-  const alertTypes = [
-    "Dispute Escalations",
-    "Payment Disbursement",
-    "Panic Alert",
-    "New User Registrations",
-    "Pending Verification",
-    "Credit Requests",
-    "Platform Downtime",
-  ];
-
-  return (
-    <div className="w-full space-y-6">
-      <div>
-        <h2 className="font-dm-sans font-medium text-lg md:text-[20px] text-[#171417] mb-2">
-          Notification Preferences
-        </h2>
-        <p className="font-dm-sans text-sm md:text-base text-[#6B6969]">
-          Stay informed without the noise. Choose which alerts matter to you.
-        </p>
-      </div>
-
-      <div className="space-y-5">
-        <div className="flex items-center justify-between h-[28px] border-b border-[#E3E5E5]">
-          <span className="font-dm-sans font-bold text-sm md:text-base text-[#171417]">
-            Alert Type
-          </span>
-          <div className="flex gap-8 md:gap-24">
-            <span className="font-dm-sans font-bold text-sm md:text-base text-[#171417] w-14 text-center">Email</span>
-            <span className="font-dm-sans font-bold text-sm md:text-base text-[#171417] w-14 text-center">In-app</span>
-          </div>
-        </div>
-        {alertTypes.map((type) => (
-          <NotificationRow key={type} label={type} />
-        ))}
-      </div>
-    </div>
-  );
-};
 
 // ============================================================================
 // OTP MODAL COMPONENT - Request and verify OTP
