@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import SubscriptionDetailsModal from "./SubscriptionDetailsModal";
 import { Subscription, Pagination } from "@/store/subscriptionStore";
+import { useSubscriptionStore } from "@/store/subscriptionStore";
 
 interface SubscriptionTableProps {
   subscriptions: Subscription[];
@@ -18,8 +19,8 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
   onPageChange = () => {},
 }) => {
   const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
+  const { searchTerm, selectedFilters } = useSubscriptionStore();
 
-  // Format subscription data for display
   const formattedSubscriptions = useMemo(() => {
     return subscriptions.map((sub) => {
       const isSeller = sub.user.role === "SELLER" || 
@@ -49,8 +50,22 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
     });
   }, [subscriptions]);
 
+  const filteredSubscriptions = useMemo(() => {
+    return formattedSubscriptions.filter((sub) => {
+      const matchesSearch =
+        sub.sellerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sub.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sub.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sub.planType.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesFilter =
+        selectedFilters.includes('All') || selectedFilters.includes(sub.status);
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [formattedSubscriptions, searchTerm, selectedFilters]);
+
   const handleViewDetails = (sub: typeof formattedSubscriptions[0]) => {
-    // Map transaction data from backend if available, otherwise empty array
     const payments = sub.transaction ? 
       Array.isArray(sub.transaction) ? 
         sub.transaction.map((txn: any) => ({
@@ -64,7 +79,6 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
           transactionId: txn.reference || txn.id,
         }))
       : [
-        // Single transaction object
         {
           date: new Date(sub.transaction.createdAt).toLocaleDateString('en-GB', {
             day: '2-digit',
@@ -78,7 +92,6 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
       ]
     : [];
 
-    // Determine overall payment status from transactions
     const paymentStatus = payments.length > 0 
       ? payments.some((p: any) => p.status === 'Paid') ? 'Paid' : 'Pending'
       : 'Pending';
@@ -110,26 +123,12 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
     }
   };
 
-  if (formattedSubscriptions.length === 0) {
+  if (filteredSubscriptions.length === 0) {
     return <div className="py-20 text-center text-gray-500">No subscriptions found</div>;
   }
 
-  // Props for Pagination
-  const paginationProps = {
-    currentPage: pagination?.page || 1,
-    totalPages: pagination?.page || 1,
-    onPageChange: (page: number) => {
-      // Scroll to top
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      // Trigger fetch with new page
-      if (onPageChange) onPageChange(page);
-    },
-    isLoading: loading,
-  };
-
   return (
     <>
-      {/* Desktop Table */}
       <div className="hidden md:block w-full overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -155,7 +154,7 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
             </tr>
           </thead>
           <tbody>
-            {formattedSubscriptions.map((sub) => (
+            {filteredSubscriptions.map((sub) => (
               <tr
                 key={sub.id}
                 className="bg-white border-b border-[#E5E5E5] hover:bg-[#FAFAFA] transition-colors"
@@ -196,9 +195,8 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
         </table>
       </div>
 
-      {/* Mobile Cards */}
       <div className="md:hidden space-y-4 p-4">
-        {formattedSubscriptions.map((sub) => (
+        {filteredSubscriptions.map((sub) => (
           <div
             key={sub.id}
             className="bg-white border border-[#E8E3E3] rounded-lg p-4 sm:p-5 shadow-sm"
@@ -244,7 +242,6 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
         ))}
       </div>
 
-      {/* Pagination */}
       {pagination && pagination.page > 1 && (
         <div className="flex justify-center items-center gap-3 px-6 py-6 border-t border-[#E5E5E5] bg-white">
           <button
@@ -261,17 +258,17 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
           </button>
 
           <span className="px-4 py-2 text-[#646264] font-dm-sans font-medium">
-            Page {pagination.page} of {pagination.page}
+            Page {pagination.page} of {pagination.totalPages}
           </span>
 
           <button
             onClick={() => {
-              if (pagination.page < pagination.page && !loading) {
+              if (pagination.page < pagination.totalPages && !loading) {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 onPageChange(pagination.page + 1);
               }
             }}
-            disabled={pagination.page === pagination.page || loading}
+            disabled={pagination.page === pagination.totalPages || loading}
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#E5E5E5] text-[#171417] font-dm-sans font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#FAFAFA] transition-colors"
           >
             Next
@@ -279,7 +276,6 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
         </div>
       )}
 
-      {/* Beautiful Modal */}
       <SubscriptionDetailsModal
         isOpen={!!selectedSubscription}
         onClose={() => setSelectedSubscription(null)}

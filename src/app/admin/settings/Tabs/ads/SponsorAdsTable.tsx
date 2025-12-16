@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import AdsSubscriberDetailsModal from "./AdsSubscriberDetailsModal";
 import { SponsorAd, Pagination } from "@/store/sponsorAdsStore";
+import { useSponsorAdsStore } from "@/store/sponsorAdsStore";
 import { SponsorAdsFilterState } from "../../components/filters/SponsorAdsFilter";
 
 interface SponsorAdsTableProps {
@@ -21,8 +22,8 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({
   onPageChange = () => {},
 }) => {
   const [selectedSubscriber, setSelectedSubscriber] = useState<any>(null);
+  const { searchTerm, selectedFilters } = useSponsorAdsStore();
 
-  // Format ads data for display
   const formattedAds = useMemo(() => {
     return ads.map((ad) => {
       const isSeller = ad.user.role === "SELLER" || 
@@ -52,32 +53,42 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({
     });
   }, [ads]);
 
-  // Filter logic using useMemo for performance
   const filteredAds = useMemo(() => {
     return formattedAds.filter((ad) => {
-      // Subscription Status filter
+      // Search filter - search name, email, phone, or plan
+      const matchesSearch =
+        ad.sellerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ad.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ad.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ad.planType.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Status filter from store - match All or specific status
+      const matchesStatusFilter =
+        selectedFilters.includes('All') || selectedFilters.includes(ad.status);
+
+      // Subscription Status filter from filter panel
       if (filters.subscriptionStatus && ad.statusLabel !== filters.subscriptionStatus) {
         return false;
       }
 
-      // Plan Type filter
+      // Plan Type filter from filter panel
       if (filters.planType && !ad.planType.toLowerCase().includes(filters.planType.toLowerCase())) {
         return false;
       }
 
-      // Date range filter
+      // Date range filter from filter panel
       if (filters.fromDate || filters.toDate) {
         const adDate = new Date(ad.endDate);
         if (filters.fromDate && adDate < filters.fromDate) return false;
         if (filters.toDate && adDate > filters.toDate) return false;
       }
 
-      return true;
+      // All filters must match
+      return matchesSearch && matchesStatusFilter;
     });
-  }, [formattedAds, filters]);
+  }, [formattedAds, searchTerm, selectedFilters, filters]);
 
   const handleViewDetails = (ad: typeof formattedAds[0]) => {
-    // Map transaction data from backend if available, otherwise empty array
     const payments = ad.transaction ? 
       Array.isArray(ad.transaction) ? 
         ad.transaction.map((txn: any) => ({
@@ -91,7 +102,6 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({
           transactionId: txn.reference || txn.id,
         }))
       : [
-        // Single transaction object
         {
           date: new Date(ad.transaction.createdAt).toLocaleDateString('en-GB', {
             day: '2-digit',
@@ -109,7 +119,7 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({
       id: ad.id,
       userId: ad.userId || ad.user.id,
       sellerName: ad.sellerName,
-      businessName: ad.sellerName, // Using seller name as business name (adjust as needed)
+      businessName: ad.sellerName,
       email: ad.email,
       phone: ad.phone,
       planType: ad.planType,
@@ -133,7 +143,7 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({
     return (
       <div className="py-20 text-center">
         <p className="text-[#757575] font-dm-sans text-lg">
-          {Object.values(filters).some(Boolean)
+          {Object.values(filters).some(Boolean) || searchTerm || !selectedFilters.includes('All')
             ? "No ads match your current filters"
             : "No sponsored ads found"}
         </p>
@@ -143,7 +153,6 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({
 
   return (
     <>
-      {/* Desktop Table */}
       <div className="hidden md:block w-full overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[900px]">
           <thead>
@@ -186,7 +195,6 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({
         </table>
       </div>
 
-      {/* Mobile Cards */}
       <div className="md:hidden space-y-4 p-4">
         {filteredAds.map((ad) => (
           <div key={ad.id} className="bg-white border border-[#E8E3E3] rounded-lg p-5 shadow-sm">
@@ -225,7 +233,6 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({
         ))}
       </div>
 
-      {/* Pagination */}
       {pagination && pagination.pages > 1 && (
         <div className="flex justify-center items-center gap-3 px-6 py-6 border-t border-[#E5E5E5] bg-white">
           <button
@@ -260,7 +267,6 @@ const SponsorAdsTable: React.FC<SponsorAdsTableProps> = ({
         </div>
       )}
 
-      {/* Modal */}
       <AdsSubscriberDetailsModal
         isOpen={!!selectedSubscriber}
         onClose={() => setSelectedSubscriber(null)}
