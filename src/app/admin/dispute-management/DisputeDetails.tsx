@@ -317,7 +317,7 @@ const DisputeDetailsModal = () => {
                           placeholder="Select resolution action"
                           options={[
                             "Refund Buyer (70% only)",
-                            "Pay Seller (Release 70%)",
+                            "Pay Seller (Release 65%)",
                             "Split Payment Between Buyer & Seller",
                             "Seller Rework",
                           ]}
