@@ -13,12 +13,15 @@ import {
 } from "lucide-react";
 import React from "react";
 
+type DisplayStatus = "New" | "Under review" | "Resolved" | "Open";
+type ApiStatus = "OPEN" | "UNDER_REVIEW" | "RESOLVED";
+
 type DisputeStatusProps = {
-  status: "New" | "Under review" | "Resolved" | "Open";
+  status: DisplayStatus | ApiStatus;
 };
 
 const statusConfig: Record<
-  DisputeStatusProps["status"],
+  DisplayStatus,
   {
     icon: React.ReactNode;
     textClass: string;
@@ -47,8 +50,26 @@ const statusConfig: Record<
   },
 };
 
+// Map API status to display status
+function mapApiStatusToDisplay(status: ApiStatus | DisplayStatus): DisplayStatus {
+  const statusMap: Record<ApiStatus, DisplayStatus> = {
+    OPEN: "Open",
+    UNDER_REVIEW: "Under review",
+    RESOLVED: "Resolved",
+  };
+
+  // If it's already a display status, return as is
+  if (status in statusConfig) {
+    return status as DisplayStatus;
+  }
+
+  // Otherwise map from API status
+  return statusMap[status as ApiStatus];
+}
+
 export function DisputeStatus({ status }: DisputeStatusProps) {
-  const config = statusConfig[status];
+  const displayStatus = mapApiStatusToDisplay(status);
+  const config = statusConfig[displayStatus];
 
   return (
     <span
@@ -59,7 +80,7 @@ export function DisputeStatus({ status }: DisputeStatusProps) {
       )}
     >
       {config.icon}
-      {status}
+      {displayStatus}
     </span>
   );
 }

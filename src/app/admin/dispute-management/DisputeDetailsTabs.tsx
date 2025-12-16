@@ -23,7 +23,7 @@ export default function DisputeDetailsTabs() {
           Dispute Details
         </button>
 
-        <button
+        {/* <button
           onClick={() => setActiveTab("messages")}
           className={`flex items-center gap-2 text-[1rem] font-normal transition-colors pb-2 ${
             activeTab === "messages"
@@ -33,7 +33,7 @@ export default function DisputeDetailsTabs() {
         >
           <Mail className="w-4 h-4" />
           Message Log
-        </button>
+        </button> */}
       </div>
     </div>
   );
