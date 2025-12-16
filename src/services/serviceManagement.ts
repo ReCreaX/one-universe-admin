@@ -1,4 +1,9 @@
 // @/services/serviceManagement.ts
+import { getSession } from "next-auth/react";
+import getBaseUrl from "./baseUrl";
+
+const baseUrl = getBaseUrl("live");
+
 export type ServiceStatus = "Pending" | "Approved" | "Rejected";
 
 export interface SellerUser {
@@ -30,90 +35,131 @@ interface ServicesByStatusResponse {
   rejected: { data: Service[]; meta: { total: number } };
 }
 
-export const fetchServicesByStatus = async (): Promise<Service[]> => {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  if (!token) throw new Error("No token found");
+class ServiceManagementService {
+  /**
+   * Generic request method with NextAuth session
+   */
+  private async request(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<any> {
+    const session = await getSession();
 
-  const res = await fetch(
-    "https://one-universe-de5673cf0d65.herokuapp.com/api/v1/master-services/by-status?page=1&limit=100",
-    {
-      headers: { Authorization: `Bearer ${token}` },
+    if (!session?.accessToken) {
+      console.error("❌ No access token found in session");
+      throw new Error("Unauthorized - Please log in again");
     }
-  );
 
-  if (!res.ok) throw new Error("Failed to fetch services");
+    try {
+      const response = await fetch(`${baseUrl}${endpoint}`, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.accessToken}`,
+          ...options.headers,
+        },
+      });
 
-  const data: ServicesByStatusResponse = await res.json();
+      // Handle 401 - Token may have expired
+      if (response.status === 401) {
+        console.error("❌ Unauthorized: Token expired or invalid");
+        throw new Error("Unauthorized - Session expired");
+      }
 
-  // Flatten all services into one array with consistent id
-  const allServices: Service[] = [
-    ...data.pending.data.map(s => ({ ...s, id: s.id })),
-    ...data.approved.data.map(s => ({ ...s, id: s.id })),
-    ...data.rejected.data.map(s => ({ ...s, id: s.id })),
-  ];
+      if (response.status === 403) {
+        console.error("❌ Forbidden: Access denied");
+        throw new Error("Forbidden - Access denied");
+      }
 
-  return allServices;
-};
+      const data = await response.json();
 
-export const approveService = async (id: string) => {
-  const token = localStorage.getItem("token");
-  const res = await fetch(
-    `https://one-universe-de5673cf0d65.herokuapp.com/api/v1/master-services/${id}/approve`,
-    {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
+      if (!response.ok) {
+        throw new Error(data.message || `API Error: ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error(`❌ Request failed for ${endpoint}:`, error);
+      throw error;
     }
-  );
-  if (!res.ok) throw new Error("Approval failed");
-};
+  }
 
-export const rejectService = async (id: string, reason?: string) => {
-  const token = localStorage.getItem("token");
-  const res = await fetch(
-    `https://one-universe-de5673cf0d65.herokuapp.com/api/v1/master-services/${id}/reject`,
-    {
+  /**
+   * Fetch services by status (Pending, Approved, Rejected)
+   */
+  async fetchServicesByStatus(): Promise<Service[]> {
+    const endpoint = "/master-services/by-status?page=1&limit=100";
+    const data: ServicesByStatusResponse = await this.request(endpoint);
+
+    // Flatten all services into one array with consistent id
+    const allServices: Service[] = [
+      ...data.pending.data.map((s) => ({ ...s, id: s.id })),
+      ...data.approved.data.map((s) => ({ ...s, id: s.id })),
+      ...data.rejected.data.map((s) => ({ ...s, id: s.id })),
+    ];
+
+    return allServices;
+  }
+
+  /**
+   * Approve a single service
+   */
+  async approveService(id: string): Promise<void> {
+    const endpoint = `/master-services/${encodeURIComponent(id)}/approve`;
+    await this.request(endpoint, {
       method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
+    });
+  }
+
+  /**
+   * Reject a single service with reason
+   */
+  async rejectService(id: string, reason?: string): Promise<void> {
+    const endpoint = `/master-services/${encodeURIComponent(id)}/reject`;
+    await this.request(endpoint, {
+      method: "PATCH",
       body: JSON.stringify({ reason }),
-    }
-  );
-  if (!res.ok) throw new Error("Rejection failed");
-};
+    });
+  }
 
-export const bulkApprove = async (ids: string[]) => {
-  const token = localStorage.getItem("token");
-  const res = await fetch(
-    "https://one-universe-de5673cf0d65.herokuapp.com/api/v1/master-services/bulk-approve",
-    {
+  /**
+   * Bulk approve multiple services
+   */
+  async bulkApprove(ids: string[]): Promise<void> {
+    const endpoint = "/master-services/bulk-approve";
+    await this.request(endpoint, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({ ids }),
-    }
-  );
-  if (!res.ok) throw new Error("Bulk approval failed");
-};
+    });
+  }
 
-export const bulkReject = async (ids: string[], reason?: string) => {
-  const token = localStorage.getItem("token");
-  const res = await fetch(
-    "https://one-universe-de5673cf0d65.herokuapp.com/api/v1/master-services/bulk-reject",
-    {
+  /**
+   * Bulk reject multiple services with reason
+   */
+  async bulkReject(ids: string[], reason?: string): Promise<void> {
+    const endpoint = "/master-services/bulk-reject";
+    await this.request(endpoint, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({ ids, reason }),
-    }
-  );
-  if (!res.ok) throw new Error("Bulk rejection failed");
-};
+    });
+  }
+}
+
+// Export singleton instance
+export const serviceManagementService = new ServiceManagementService();
+
+// Export legacy function names for backward compatibility
+export const fetchServicesByStatus = () =>
+  serviceManagementService.fetchServicesByStatus();
+
+export const approveService = (id: string) =>
+  serviceManagementService.approveService(id);
+
+export const rejectService = (id: string, reason?: string) =>
+  serviceManagementService.rejectService(id, reason);
+
+export const bulkApprove = (ids: string[]) =>
+  serviceManagementService.bulkApprove(ids);
+
+export const bulkReject = (ids: string[], reason?: string) =>
+  serviceManagementService.bulkReject(ids, reason);
