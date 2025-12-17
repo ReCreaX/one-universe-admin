@@ -37,6 +37,12 @@ const ReferralTable = ({ referrals }: ReferralTableProps) => {
     setOpenMenuId(null);
   };
 
+  const handleActionComplete = () => {
+    // Refresh or update referrals list here if needed
+    setIsResolveModalOpen(false);
+    setSelectedReferral(null);
+  };
+
   const getTransactionStyles = (status: Referral["firstTransaction"]) => {
     switch (status) {
       case "Completed": return "bg-[#E0F5E6] text-[#1FC16B]";
@@ -244,18 +250,7 @@ const ReferralTable = ({ referrals }: ReferralTableProps) => {
             setSelectedReferral(null);
           }}
           referral={selectedReferral}
-          onMarkAsPaid={() => {
-            console.log("Mark as Paid:", selectedReferral.id);
-            setIsResolveModalOpen(false);
-          }}
-          onRecalculateAndRetry={() => {
-            console.log("Recalculate and Retry:", selectedReferral.id);
-            setIsResolveModalOpen(false);
-          }}
-          onMarkAsIneligible={() => {
-            console.log("Mark as Ineligible:", selectedReferral.id);
-            setIsResolveModalOpen(false);
-          }}
+          onActionComplete={handleActionComplete}
         />
       )}
     </>

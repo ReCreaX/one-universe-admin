@@ -15,24 +15,42 @@ const ReferralDetailModal: React.FC<ReferralDetailModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  // Timeline events based on referral data
   const timelineEvents = [
     {
-      date: "Dec 15, 2024",
+      date: referral.signDate,
       event: "User signed up via referral link",
     },
     {
-      date: "Dec 15, 2024",
-      event: "First transaction completed (₦5,000)",
+      date: referral.signDate,
+      event: `First transaction status: ${referral.firstTransaction}`,
     },
     {
-      date: "Dec 15, 2024",
-      event: "Referral reward calculated (₦250)",
+      date: referral.signDate,
+      event: `Referral reward calculated: ₦${(referral.rewardAmount || 0).toLocaleString()}`,
     },
     {
-      date: "Dec 15, 2024",
-      event: "Reward credited to referrer's wallet",
+      date: referral.signDate,
+      event: referral.rewardEarned 
+        ? "Reward credited to referrer's wallet" 
+        : "Reward pending or not earned",
     },
   ];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Paid":
+        return { bg: "bg-[#E0F5E6]", text: "text-[#1FC16B]", dot: "bg-[#1FC16B]" };
+      case "Pending":
+        return { bg: "bg-[#FFF2B9]", text: "text-[#9D7F04]", dot: "bg-[#9D7F04]" };
+      case "Processing":
+        return { bg: "bg-[#D3E1FF]", text: "text-[#007BFF]", dot: "bg-[#007BFF]" };
+      default:
+        return { bg: "bg-[#F5F5F5]", text: "text-[#454345]", dot: "bg-[#454345]" };
+    }
+  };
+
+  const statusColor = getStatusColor(referral.status);
 
   return (
     <>
@@ -45,7 +63,7 @@ const ReferralDetailModal: React.FC<ReferralDetailModalProps> = ({
         style={{ contain: "none" }}
       >
         <div
-          className="w-full max-w-[671px] bg-white rounded-2xl shadow-[-1px_8px_12px_0px_#0000001F] overflow-hidden"
+          className="w-full max-w-[671px] bg-white rounded-2xl shadow-[-1px_8px_12px_0px_#0000001F] overflow-hidden mb-8"
           style={{ transform: "translateZ(0)" }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -74,6 +92,16 @@ const ReferralDetailModal: React.FC<ReferralDetailModalProps> = ({
           <div className="px-8 py-8 flex flex-col gap-6">
             {/* Details Section */}
             <div className="space-y-5">
+              {/* Referral ID */}
+              <div className="flex items-center justify-between">
+                <span className="font-dm-sans font-medium text-base text-[#171417]">
+                  Referral ID
+                </span>
+                <span className="font-dm-sans font-medium text-base text-[#171417]">
+                  {referral.referralId}
+                </span>
+              </div>
+
               {/* Referral Name */}
               <div className="flex items-center justify-between">
                 <span className="font-dm-sans font-medium text-base text-[#171417]">
@@ -94,14 +122,18 @@ const ReferralDetailModal: React.FC<ReferralDetailModalProps> = ({
                 </span>
               </div>
 
-              {/* Transaction ID */}
+              {/* First Transaction */}
               <div className="flex items-center justify-between">
                 <span className="font-dm-sans font-medium text-base text-[#171417]">
-                  Transaction ID
+                  First Transaction
                 </span>
-                <span className="font-dm-sans font-medium text-base text-[#454345]">
-                  TXN-789456
-                </span>
+                <div className={`inline-flex items-center px-3 py-1 rounded-lg ${
+                  referral.firstTransaction === "Completed"
+                    ? "bg-[#E0F5E6] text-[#1FC16B]"
+                    : "bg-[#FFF2B9] text-[#9D7F04]"
+                }`}>
+                  <span className="font-dm-sans text-sm font-medium">{referral.firstTransaction}</span>
+                </div>
               </div>
 
               {/* Status */}
@@ -109,50 +141,46 @@ const ReferralDetailModal: React.FC<ReferralDetailModalProps> = ({
                 <span className="font-dm-sans font-medium text-base text-[#171417]">
                   Status
                 </span>
-                <div className={`flex items-center gap-2 px-2 py-1 rounded-lg ${
-                  referral.status === "Paid" 
-                    ? "bg-[#E0F5E6]" 
-                    : referral.status === "Pending"
-                    ? "bg-[#FFF2B9]"
-                    : "bg-[#D3E1FF]"
-                }`}>
-                  <div className={`w-4 h-4 rounded-full ${
-                    referral.status === "Paid" 
-                      ? "bg-[#1FC16B]" 
-                      : referral.status === "Pending"
-                      ? "bg-[#9D7F04]"
-                      : "bg-[#007BFF]"
-                  }`} />
-                  <span className={`font-dm-sans font-medium text-sm ${
-                    referral.status === "Paid" 
-                      ? "text-[#1FC16B]" 
-                      : referral.status === "Pending"
-                      ? "text-[#9D7F04]"
-                      : "text-[#007BFF]"
-                  }`}>
+                <div className={`flex items-center gap-2 px-2 py-1 rounded-lg ${statusColor.bg}`}>
+                  <div className={`w-4 h-4 rounded-full ${statusColor.dot}`} />
+                  <span className={`font-dm-sans font-medium text-sm ${statusColor.text}`}>
                     {referral.status}
                   </span>
                 </div>
               </div>
 
-              {/* Service Fee Amount */}
+              {/* Sign Up Date */}
               <div className="flex items-center justify-between">
                 <span className="font-dm-sans font-medium text-base text-[#171417]">
-                  Service Fee Amount
+                  Sign Up Date
                 </span>
                 <span className="font-dm-sans font-medium text-base text-[#454345]">
-                  ₦5,000
+                  {referral.signDate}
                 </span>
               </div>
 
-              {/* Referral Reward */}
+              {/* Reward Earned */}
               <div className="flex items-center justify-between">
                 <span className="font-dm-sans font-medium text-base text-[#171417]">
-                  Referral Reward
+                  Reward Earned
                 </span>
-                <span className="font-dm-sans font-medium text-base text-[#454345]">
-                  5%
-                </span>
+                <div className="flex items-center gap-1">
+                  {referral.rewardEarned ? (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#1FC16B]">
+                        <path d="M13.78 4.22a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06L5.5 10.94l6.72-6.72a.75.75 0 011.06 0z" fill="currentColor"/>
+                      </svg>
+                      <span className="font-dm-sans text-sm font-medium text-[#1FC16B]">Yes</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#D84040]">
+                        <path d="M12.22 3.78a.75.75 0 010 1.06L9.06 8l3.16 3.16a.75.75 0 11-1.06 1.06L8 9.06l-3.16 3.16a.75.75 0 11-1.06-1.06L6.94 8 3.78 4.84a.75.75 0 111.06-1.06L8 6.94l3.16-3.16a.75.75 0 011.06 0z" fill="currentColor"/>
+                      </svg>
+                      <span className="font-dm-sans text-sm font-medium text-[#D84040]">No</span>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Reward Amount */}
@@ -161,17 +189,7 @@ const ReferralDetailModal: React.FC<ReferralDetailModalProps> = ({
                   Reward Amount
                 </span>
                 <span className="font-dm-sans font-medium text-base text-[#454345]">
-                  ₦250
-                </span>
-              </div>
-
-              {/* Wallet Credit Date */}
-              <div className="flex items-center justify-between">
-                <span className="font-dm-sans font-medium text-base text-[#171417]">
-                  Wallet Credit Date
-                </span>
-                <span className="font-dm-sans font-medium text-base text-[#454345]">
-                  {referral.signDate}
+                  ₦{(referral.rewardAmount || 0).toLocaleString()}
                 </span>
               </div>
 

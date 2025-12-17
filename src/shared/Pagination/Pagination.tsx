@@ -1,7 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 interface PaginationProps {
@@ -34,37 +33,40 @@ const Pagination = ({
   };
 
   return (
-    <section className="flex items-center justify-between w-full py-4 px-[100px]">
+    <section className="flex items-center justify-between w-full py-4 px-6 md:px-[100px]">
       {/* Previous Button */}
-      <Button
-        variant="outline"
-        className={`rounded-[8px] border border-[#E8E3E3] px-3 py-2 flex items-center gap-2 text-[#454345] font-bold text-[.975rem] ${
-          currentPage === 1 ? "cursor-not-allowed" : "cursor-pointer"
-        }  disabled:opacity-50`}
+      <button
         onClick={handlePrev}
         disabled={currentPage === 1}
+        className={`rounded-[8px] border border-[#E8E3E3] px-3 py-2 flex items-center gap-2 font-dm-sans font-bold text-[.975rem] transition-colors ${
+          currentPage === 1
+            ? "cursor-not-allowed opacity-50 text-[#B7B6B7]"
+            : "cursor-pointer text-[#454345] hover:bg-gray-50"
+        }`}
       >
-        <Plus className="w-4 h-4" />
-        Previous
-      </Button>
+        <ChevronLeft className="w-4 h-4" />
+        <span className="hidden sm:inline">Previous</span>
+      </button>
 
       {/* Dynamic Page Info */}
-      <p className="text-center text-gray-800 font-medium">
-        Page {currentPage} of {totalPages}
+      <p className="text-center text-gray-800 font-dm-sans font-medium">
+        Page <span className="font-bold text-[#154751]">{currentPage}</span> of{" "}
+        <span className="font-bold text-[#154751]">{totalPages}</span>
       </p>
 
       {/* Next Button */}
-      <Button
-        variant="outline"
-        className={`rounded-[8px] border border-[#E8E3E3] px-3 py-2 flex items-center gap-2 text-[#454345] font-bold text-[.975rem] ${
-          currentPage === totalPages ? "cursor-not-allowed" : "cursor-pointer"
-        }  disabled:opacity-50`}
+      <button
         onClick={handleNext}
         disabled={currentPage === totalPages}
+        className={`rounded-[8px] border border-[#E8E3E3] px-3 py-2 flex items-center gap-2 font-dm-sans font-bold text-[.975rem] transition-colors ${
+          currentPage === totalPages
+            ? "cursor-not-allowed opacity-50 text-[#B7B6B7]"
+            : "cursor-pointer text-[#454345] hover:bg-gray-50"
+        }`}
       >
-        Next
-        <Plus className="w-4 h-4 rotate-180" />
-      </Button>
+        <span className="hidden sm:inline">Next</span>
+        <ChevronRight className="w-4 h-4" />
+      </button>
     </section>
   );
 };

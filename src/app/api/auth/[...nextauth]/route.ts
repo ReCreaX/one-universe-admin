@@ -96,7 +96,7 @@ export const authOptions: NextAuthOptions = {
       return null;
     }
 
-    console.log("📥 Login API response:", data);
+    // console.log("📥 Login API response:", data);
 
     if (!res.ok) {
       console.error("❌ Backend rejected login:", data.message);
