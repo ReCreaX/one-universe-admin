@@ -2,7 +2,11 @@
 import React from "react";
 import Image from "next/image";
 
-const PromotionalEmptyState = () => {
+interface PromotionalEmptyStateProps {
+  onCreateOffer?: () => void; // ✅ FIXED: Add callback prop
+}
+
+const PromotionalEmptyState: React.FC<PromotionalEmptyStateProps> = ({ onCreateOffer }) => {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
       {/* Empty Illustration */}
@@ -28,14 +32,12 @@ const PromotionalEmptyState = () => {
 
       {/* Create Offer Button */}
       <button
-        className="relative flex items-center justify-center gap-2 w-[241px] h-[48px] rounded-[20px] px-6 py-4"
+        className="relative flex items-center justify-center gap-2 w-[241px] h-[48px] rounded-[20px] px-6 py-4 hover:opacity-90 transition-opacity"
         style={{
           background: 'radial-gradient(50% 50% at 50% 50%, #154751 37%, #04171F 100%)'
         }}
-        onClick={() => {
-          // Add your navigation/action logic here
-          console.log('Create offer clicked');
-        }}
+        onClick={onCreateOffer} // ✅ FIXED: Use the callback prop
+        type="button"
       >
         {/* Plus icon */}
         <svg 

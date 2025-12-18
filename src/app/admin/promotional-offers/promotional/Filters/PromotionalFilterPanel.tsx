@@ -1,3 +1,4 @@
+// app/admin/settings/Filters/PromotionalFilterPanel.tsx
 "use client";
 
 import { ChevronUp, X, Calendar, Check } from "lucide-react";
@@ -6,71 +7,76 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { usePromotionalStore } from "@/store/promotionalStore";
 
-interface PromotionalFilterProps {
+interface PromotionalFilterPanelProps {
   onApplyFilter: () => void;
 }
 
-const PromotionalFilter: React.FC<PromotionalFilterProps> = ({ onApplyFilter }) => {
-  const { PromotionalFilter, setPromotionalFilter, clearPromotionalFilter } = usePromotionalStore();
+// ✅ DEFINE EXACT TYPES FOR STRICT TYPE CHECKING
+type StatusType = "Active" | "Draft" | "Expired";
+type TypeValue = "Discount" | "Free Shipping" | "Bundle" | "Cashback";
+type EligibleUserType = "All Users" | "Premium Members" | "First-time Buyers" | "Existing Users";
 
-  // Local state — fully typed
+const PromotionalFilterPanel: React.FC<PromotionalFilterPanelProps> = ({ onApplyFilter }) => {
+  // ✅ FIXED: Use different name to avoid conflict with PromotionalFilter state
+  const { PromotionalFilter: filterState, setPromotionalFilter, clearPromotionalFilter } = usePromotionalStore();
+
+  // Local state — fully typed with exact literal types
   const [statusOpen, setStatusOpen] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<"Active" | "Draft" | "Completed" | "Expired" | undefined>(
-    PromotionalFilter.status ?? undefined
+  const [selectedStatus, setSelectedStatus] = useState<StatusType | undefined>(
+    (filterState.status as StatusType) ?? undefined
   );
 
   const [typeOpen, setTypeOpen] = useState(false);
-  const [selectedTypes, setSelectedTypes] = useState<("Discount" | "Free Shipping" | "Bundle" | "Cashback")[]>(
-    PromotionalFilter.type ?? []
+  const [selectedTypes, setSelectedTypes] = useState<TypeValue[]>(
+    (filterState.type as TypeValue[]) ?? []
   );
 
   const [eligibleOpen, setEligibleOpen] = useState(false);
-  const [selectedEligible, setSelectedEligible] = useState<
-    ("All Users" | "Premium Members" | "First-time Buyers" | "Existing Users")[]
-  >(PromotionalFilter.eligibleUser ?? []);
+  const [selectedEligible, setSelectedEligible] = useState<EligibleUserType[]>(
+    (filterState.eligibleUser as EligibleUserType[]) ?? []
+  );
 
-  const [fromDate, setFromDate] = useState<Date | undefined>(PromotionalFilter.fromDate ?? undefined);
-  const [toDate, setToDate] = useState<Date | undefined>(PromotionalFilter.toDate ?? undefined);
+  const [fromDate, setFromDate] = useState<Date | undefined>(filterState.fromDate ?? undefined);
+  const [toDate, setToDate] = useState<Date | undefined>(filterState.toDate ?? undefined);
 
   // Sync store → local state
   useEffect(() => {
-    setSelectedStatus(PromotionalFilter.status ?? undefined);
-    setSelectedTypes(PromotionalFilter.type ?? []);
-    setSelectedEligible(PromotionalFilter.eligibleUser ?? []);
-    setFromDate(PromotionalFilter.fromDate ?? undefined);
-    setToDate(PromotionalFilter.toDate ?? undefined);
-  }, [PromotionalFilter]);
+    setSelectedStatus((filterState.status as StatusType) ?? undefined);
+    setSelectedTypes((filterState.type as TypeValue[]) ?? []);
+    setSelectedEligible((filterState.eligibleUser as EligibleUserType[]) ?? []);
+    setFromDate(filterState.fromDate ?? undefined);
+    setToDate(filterState.toDate ?? undefined);
+  }, [filterState]);
 
-  // Options
-  const statusOptions = [
-    { label: "Active", value: "Active" as const },
-    { label: "Draft", value: "Draft" as const },
-    { label: "Completed", value: "Completed" as const },
-    { label: "Expired", value: "Expired" as const },
+  // Options - with exact literal types
+  const statusOptions: { label: string; value: StatusType }[] = [
+    { label: "Active", value: "Active" },
+    { label: "Draft", value: "Draft" },
+    { label: "Expired", value: "Expired" },
   ];
 
-  const typeOptions = [
-    { label: "Discount", value: "Discount" as const },
-    { label: "Free Shipping", value: "Free Shipping" as const },
-    { label: "Bundle", value: "Bundle" as const },
-    { label: "Cashback", value: "Cashback" as const },
+  const typeOptions: { label: string; value: TypeValue }[] = [
+    { label: "Discount", value: "Discount" },
+    { label: "Free Shipping", value: "Free Shipping" },
+    { label: "Bundle", value: "Bundle" },
+    { label: "Cashback", value: "Cashback" },
   ];
 
-  const eligibleOptions = [
-    { label: "All Users", value: "All Users" as const },
-    { label: "Premium Members", value: "Premium Members" as const },
-    { label: "First-time Buyers", value: "First-time Buyers" as const },
-    { label: "Existing Users", value: "Existing Users" as const },
+  const eligibleOptions: { label: string; value: EligibleUserType }[] = [
+    { label: "All Users", value: "All Users" },
+    { label: "Premium Members", value: "Premium Members" },
+    { label: "First-time Buyers", value: "First-time Buyers" },
+    { label: "Existing Users", value: "Existing Users" },
   ];
 
-  // Handlers
-  const toggleType = (val: typeof typeOptions[number]["value"]) => {
+  // Handlers with type safety
+  const toggleType = (val: TypeValue) => {
     setSelectedTypes((prev) =>
       prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]
     );
   };
 
-  const toggleEligible = (val: typeof eligibleOptions[number]["value"]) => {
+  const toggleEligible = (val: EligibleUserType) => {
     setSelectedEligible((prev) =>
       prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]
     );
@@ -101,7 +107,7 @@ const PromotionalFilter: React.FC<PromotionalFilterProps> = ({ onApplyFilter }) 
     onApplyFilter(); // Close the panel
   };
 
-  // Fixed CustomInput — this was the main error!
+  // Fixed CustomInput
   const CustomInput = React.forwardRef<HTMLButtonElement, { value?: string; onClick?: () => void; placeholder?: string }>(
     ({ value, onClick, placeholder }, ref) => (
       <button
@@ -399,4 +405,4 @@ const PromotionalFilter: React.FC<PromotionalFilterProps> = ({ onApplyFilter }) 
   );
 };
 
-export default PromotionalFilter;
+export default PromotionalFilterPanel;

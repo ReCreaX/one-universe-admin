@@ -3,16 +3,16 @@
 
 import React, { useState } from "react";
 import { X, ArrowLeft } from "lucide-react";
-import { PromotionalOffer } from "@/types/PromotionalOffer";
 import CreatePromoOfferModal from "./CreatePromoOfferModal";
 import DeletePromotionModal from "./DeletePromotionModal";
+import useToastStore from "@/store/useToastStore";
 
 interface PromotionDetailModalProps {
-  offer: PromotionalOffer;
+  offer: any; // Use any to accept the transformed promotion data
   isOpen: boolean;
   onClose: () => void;
-  onEdit?: (offer: PromotionalOffer) => void;
-  onDelete?: (offer: PromotionalOffer) => void;
+  onEdit?: (offer: any) => void;
+  onDelete?: (offer: any) => void;
 }
 
 const PromotionDetailModal: React.FC<PromotionDetailModalProps> = ({ 
@@ -24,6 +24,7 @@ const PromotionDetailModal: React.FC<PromotionDetailModalProps> = ({
 }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const { showToast } = useToastStore();
 
   const handleEditClick = () => {
     if (onEdit) {
@@ -40,9 +41,9 @@ const PromotionDetailModal: React.FC<PromotionDetailModalProps> = ({
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (onDelete) {
-      onDelete(offer);
+      await onDelete(offer);
     }
     onClose();
   };
@@ -71,7 +72,7 @@ const PromotionDetailModal: React.FC<PromotionDetailModalProps> = ({
                 <ArrowLeft className="w-6 h-6 text-[#171417]" />
               </button>
               <h2 className="font-dm-sans font-bold text-[20px] leading-[140%] text-[#171417]">
-                {offer.title}
+                {offer.title || offer.offerTitle}
               </h2>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-white/30 rounded-lg transition">
@@ -83,7 +84,7 @@ const PromotionDetailModal: React.FC<PromotionDetailModalProps> = ({
           <div className="px-4 md:px-8 py-8">
             <div className="grid grid-cols-3 gap-2 md:gap-6">
               <div className="bg-white rounded-xl p-3 md:p-4 text-center border border-[#E5E7EF]">
-                <p className="font-dm-sans font-bold text-lg md:text-2xl text-[#171417] whitespace-nowrap">{offer.redemptions}</p>
+                <p className="font-dm-sans font-bold text-lg md:text-2xl text-[#171417] whitespace-nowrap">{offer.redemptions || 0}</p>
                 <p className="font-dm-sans text-xs md:text-base text-[#6B6969] mt-1 whitespace-nowrap">Redemptions</p>
               </div>
               <div className="bg-white rounded-xl p-3 md:p-4 text-center border border-[#E5E7EF]">
@@ -102,12 +103,12 @@ const PromotionDetailModal: React.FC<PromotionDetailModalProps> = ({
             {[
               { label: "Type", value: offer.type },
               { label: "Eligible Users", value: offer.eligibleUser, badge: true },
-              { label: "Trigger", value: "User Signup" },
-              { label: "Reward Value", value: "20%" },
-              { label: "Start Date", value: "March 11, 2025" },
+              { label: "Trigger", value: offer.activationTrigger || "User Signup" },
+              { label: "Reward Value", value: `${offer.rewardValue}${offer.rewardUnit}` },
+              { label: "Start Date", value: offer.startDate || "March 11, 2025" },
               { label: "End Date", value: offer.endDate },
-              { label: "Max per User", value: "1", pill: true },
-              { label: "Max Total", value: "400", pill: true, bg: "#FFF9F9" },
+              { label: "Max per User", value: offer.maxRedemptionPerUser?.toString() || "1", pill: true },
+              { label: "Max Total", value: offer.maxTotalRedemption?.toString() || "400", pill: true, bg: "#FFF9F9" },
               { label: "Status", value: offer.status, status: offer.status },
             ].map((item, i) => (
               <div key={i} className="flex items-center justify-between">
@@ -170,7 +171,7 @@ const PromotionDetailModal: React.FC<PromotionDetailModalProps> = ({
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
-        offerTitle={offer.title}
+        offerTitle={offer.title || offer.offerTitle}
       />
     </>
   );

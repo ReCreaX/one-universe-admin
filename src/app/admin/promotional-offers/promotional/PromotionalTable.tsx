@@ -1,35 +1,34 @@
-// components/PromotionalTable.tsx
+// components/PromotionalOffersTable.tsx
 "use client";
 
 import React, { useState } from "react";
-import { PromotionalOffer } from "@/types/PromotionalOffer";
+import { Eye, Edit2, Trash2 } from "lucide-react";
 import PromotionalEmptyState from "./PromotionalEmptyState";
 import PromotionDetailModal from "./modal/PromotionDetailModal";
 import CreatePromoOfferModal from "./modal/CreatePromoOfferModal";
 import DeletePromotionModal from "./modal/DeletePromotionModal";
-import { Eye, Edit2, Trash2 } from "lucide-react";
+import { usePromotionalStore } from "@/store/promotionalStore";
+import useToastStore from "@/store/useToastStore";
 
 interface PromotionalOffersTableProps {
-  offers: PromotionalOffer[];
+  promotions: any[];
 }
 
-const PromotionalOffersTable = ({ offers }: PromotionalOffersTableProps) => {
+const PromotionalOffersTable = ({ promotions }: PromotionalOffersTableProps) => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
 
-  // View modal
-  const [detailOffer, setDetailOffer] = useState<PromotionalOffer | null>(null);
-
-  // Edit modal
-  const [editOffer, setEditOffer] = useState<PromotionalOffer | null>(null);
+  const [detailPromo, setDetailPromo] = useState<any>(null);
+  const [editPromo, setEditPromo] = useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
-  // Delete modal
-  const [deleteOffer, setDeleteOffer] = useState<PromotionalOffer | null>(null);
+  const [deletePromo, setDeletePromo] = useState<any>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
+  const { showToast } = useToastStore();
+  const { deletePromotion, fetchAllPromotions, fetchStats } = usePromotionalStore();
+
   const handleActionClick = (
-    offerId: string,
+    promoId: string,
     event: React.MouseEvent<HTMLButtonElement>
   ) => {
     const button = event.currentTarget;
@@ -50,142 +49,213 @@ const PromotionalOffersTable = ({ offers }: PromotionalOffersTableProps) => {
     }
 
     setMenuPosition({ top, left });
-    setOpenMenuId(prev => prev === offerId ? null : offerId);
+    setOpenMenuId((prev) => (prev === promoId ? null : promoId));
   };
 
-  const handleView = (offer: PromotionalOffer) => {
-    setDetailOffer(offer);
+  const handleView = (promo: any) => {
+    setDetailPromo(promo);
     setOpenMenuId(null);
   };
 
-  const handleEdit = (offer: PromotionalOffer) => {
-    setEditOffer(offer);
+  const handleEdit = (promo: any) => {
+    setEditPromo(promo);
     setIsEditModalOpen(true);
     setOpenMenuId(null);
   };
 
-  const handleDelete = (offer: PromotionalOffer) => {
-    setDeleteOffer(offer);
+  const handleDelete = (promo: any) => {
+    setDeletePromo(promo);
     setIsDeleteModalOpen(true);
     setOpenMenuId(null);
   };
 
-  const handleConfirmDelete = () => {
-    if (deleteOffer) {
-      alert(`"${deleteOffer.title}" deleted successfully!`);
-      // Here you would call your API to delete the offer
-      // e.g., await deleteOffer(deleteOffer.id);
+  const handleConfirmDelete = async () => {
+    if (!deletePromo) return;
+
+    try {
+      await deletePromotion(deletePromo.id);
+      showToast(
+        "success",
+        "Success",
+        `"${deletePromo.offerTitle || deletePromo.title}" deleted successfully`,
+        3000
+      );
+
+      await Promise.all([fetchAllPromotions(1, 100), fetchStats()]);
+
+      setIsDeleteModalOpen(false);
+      setDeletePromo(null);
+    } catch (err: any) {
+      showToast(
+        "error",
+        "Error",
+        err.message || "Failed to delete promotion",
+        3000
+      );
     }
   };
 
-  // Handle edit from detail modal
-  const handleEditFromDetail = (offer: PromotionalOffer) => {
-    setDetailOffer(null); // Close detail modal
+  const handleEditFromDetail = (promo: any) => {
+    setDetailPromo(null);
     setTimeout(() => {
-      setEditOffer(offer); // Set offer to edit
-      setIsEditModalOpen(true); // Open edit modal
-    }, 150); // Small delay for smooth transition
+      setEditPromo(promo);
+      setIsEditModalOpen(true);
+    }, 150);
   };
 
-  // Handle delete from detail modal
-  const handleDeleteFromDetail = (offer: PromotionalOffer) => {
-    // The delete modal is already shown from PromotionDetailModal
-    // No need to do anything here as it's handled internally
-  };
-
-  const getStatusStyles = (status: PromotionalOffer["status"]) => {
+  const getStatusStyles = (status: string) => {
     switch (status) {
-      case "Active": return "bg-[#E0F5E6] text-[#1FC16B]";
-      case "Completed": return "bg-[#FFE8E8] text-[#D32F2F]";
-      case "Expired": return "bg-[#FFE8E8] text-[#D32F2F]";
-      case "Draft": return "bg-[#D3E1FF] text-[#007BFF]";
-      default: return "";
+      case "Active":
+        return "bg-[#E0F5E6] text-[#1FC16B]";
+      case "Draft":
+        return "bg-[#D3E1FF] text-[#007BFF]";
+      case "Expired":
+        return "bg-[#FFE8E8] text-[#D32F2F]";
+      default:
+        return "";
     }
   };
 
   const getTypeStyles = (type: string) => {
     switch (type) {
-      case "Discount": return "bg-[#FFF1E6] text-[#E67E22]";
-      case "Free Shipping": return "bg-[#E8F5E9] text-[#388E3C]";
-      case "Bundle": return "bg-[#F3E5F5] text-[#7B1FA2]";
-      case "Cashback": return "bg-[#FFF8E1] text-[#F57F17]";
-      default: return "";
+      case "DISCOUNT":
+        return "bg-[#FFF1E6] text-[#E67E22]";
+      case "FREE_SHIPPING":
+        return "bg-[#E8F5E9] text-[#388E3C]";
+      case "BUNDLE":
+        return "bg-[#F3E5F5] text-[#7B1FA2]";
+      case "CASHBACK":
+        return "bg-[#FFF8E1] text-[#F57F17]";
+      default:
+        return "";
     }
   };
 
   return (
     <>
-      {offers.length > 0 ? (
+      {promotions.length > 0 ? (
         <>
           {/* Desktop Table */}
           <div className="hidden md:block w-full overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="bg-[#FFFCFC] border-b border-[#E5E5E5]">
-                  <th className="py-[18px] px-[25px] font-dm-sans font-medium text-base text-[#646264]">Offer Title</th>
-                  <th className="py-[18px] px-[25px] font-dm-sans font-medium text-base text-[#646264]">Type</th>
-                  <th className="py-[18px] px-[25px] font-dm-sans font-medium text-base text-[#646264]">Eligible User</th>
-                  <th className="py-[18px] px-[25px] font-dm-sans font-medium text-base text-[#646264]">End Date</th>
-                  <th className="py-[18px] px-[25px] font-dm-sans font-medium text-base text-[#646264]">Redemptions</th>
-                  <th className="py-[18px] px-[25px] font-dm-sans font-medium text-base text-[#646264]">Status</th>
-                  <th className="py-[18px] px-[25px] font-inter font-medium text-base text-[#7B7B7B]">Action</th>
+                  <th className="py-[18px] px-[25px] font-dm-sans font-medium text-base text-[#646264]">
+                    Offer Title
+                  </th>
+                  <th className="py-[18px] px-[25px] font-dm-sans font-medium text-base text-[#646264]">
+                    Type
+                  </th>
+                  <th className="py-[18px] px-[25px] font-dm-sans font-medium text-base text-[#646264]">
+                    Eligible Users
+                  </th>
+                  <th className="py-[18px] px-[25px] font-dm-sans font-medium text-base text-[#646264]">
+                    End Date
+                  </th>
+                  <th className="py-[18px] px-[25px] font-dm-sans font-medium text-base text-[#646264]">
+                    Redemptions
+                  </th>
+                  <th className="py-[18px] px-[25px] font-dm-sans font-medium text-base text-[#646264]">
+                    Status
+                  </th>
+                  <th className="py-[18px] px-[25px] font-inter font-medium text-base text-[#7B7B7B]">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {offers.map((offer) => (
-                  <tr key={offer.id} className="bg-white border-b border-[#E5E5E5] hover:bg-[#FAFAFA]">
-                    <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">{offer.title}</td>
+                {promotions.map((promo) => (
+                  <tr
+                    key={promo.id}
+                    className="bg-white border-b border-[#E5E5E5] hover:bg-[#FAFAFA]"
+                  >
+                    <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">
+                      {promo.title || promo.offerTitle}
+                    </td>
                     <td className="py-[18px] px-[25px]">
-                      <div className={`inline-flex items-center px-3 py-1 rounded-lg w-fit ${getTypeStyles(offer.type)}`}>
-                        <span className="font-dm-sans text-sm font-medium">{offer.type}</span>
+                      <div
+                        className={`inline-flex items-center px-3 py-1 rounded-lg w-fit ${getTypeStyles(
+                          promo.type
+                        )}`}
+                      >
+                        <span className="font-dm-sans text-sm font-medium">
+                          {promo.type}
+                        </span>
                       </div>
                     </td>
-                    <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">{offer.eligibleUser}</td>
-                    <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">{offer.endDate}</td>
-                    <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237] font-medium">{offer.redemptions.toLocaleString()}</td>
+                    <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">
+                      {promo.eligibleUser}
+                    </td>
+                    <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">
+                      {promo.endDate}
+                    </td>
+                    <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237] font-medium">
+                      {(promo.redemptions || 0).toLocaleString()}
+                    </td>
                     <td className="py-[18px] px-[25px]">
-                      <div className={`inline-flex items-center px-3 py-1 rounded-lg ${getStatusStyles(offer.status)}`}>
-                        <span className="font-dm-sans text-sm font-medium">{offer.status}</span>
+                      <div
+                        className={`inline-flex items-center px-3 py-1 rounded-lg ${getStatusStyles(
+                          promo.status || "Draft"
+                        )}`}
+                      >
+                        <span className="font-dm-sans text-sm font-medium">
+                          {promo.status || "Draft"}
+                        </span>
                       </div>
                     </td>
                     <td className="py-[18px] px-[25px] relative">
                       <button
-                        onClick={(e) => handleActionClick(offer.id, e)}
+                        onClick={(e) => handleActionClick(promo.id, e)}
                         className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                       >
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-[#303237]">
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          className="text-[#303237]"
+                        >
                           <circle cx="10" cy="5" r="2" fill="currentColor" />
                           <circle cx="10" cy="10" r="2" fill="currentColor" />
                           <circle cx="10" cy="15" r="2" fill="currentColor" />
                         </svg>
                       </button>
 
-                      {openMenuId === offer.id && (
+                      {openMenuId === promo.id && (
                         <div
                           className="fixed w-42 bg-white rounded-[20px] shadow-[0px_8px_29px_0px_#5F5E5E30] border border-[#E5E7EF] overflow-hidden z-50"
-                          style={{ top: menuPosition.top, left: menuPosition.left }}
+                          style={{
+                            top: menuPosition.top,
+                            left: menuPosition.left,
+                          }}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
-                            onClick={() => handleView(offer)}
+                            onClick={() => handleView(promo)}
                             className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
                           >
                             <Eye className="w-4.5 h-4.5 text-[#454345]" />
-                            <span className="font-dm-sans text-base text-[#454345]">View Offer</span>
+                            <span className="font-dm-sans text-base text-[#454345]">
+                              View Offer
+                            </span>
                           </button>
                           <button
-                            onClick={() => handleEdit(offer)}
+                            onClick={() => handleEdit(promo)}
                             className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
                           >
                             <Edit2 className="w-4.5 h-4.5 text-[#454345]" />
-                            <span className="font-dm-sans text-base text-[#454345]">Edit Offer</span>
+                            <span className="font-dm-sans text-base text-[#454345]">
+                              Edit Offer
+                            </span>
                           </button>
                           <button
-                            onClick={() => handleDelete(offer)}
+                            onClick={() => handleDelete(promo)}
                             className="w-full flex items-center gap-2.5 px-6 py-4.5 hover:bg-[#FAFAFA] transition text-red-600"
                           >
                             <Trash2 className="w-4.5 h-4.5 text-red-600" />
-                            <span className="font-dm-sans text-base text-red-600">Delete Offer</span>
+                            <span className="font-dm-sans text-base text-red-600">
+                              Delete Offer
+                            </span>
                           </button>
                         </div>
                       )}
@@ -198,18 +268,31 @@ const PromotionalOffersTable = ({ offers }: PromotionalOffersTableProps) => {
 
           {/* Mobile Cards */}
           <div className="md:hidden space-y-4 p-4">
-            {offers.map((offer) => (
-              <div key={offer.id} className="bg-white border border-[#E8E3E3] rounded-lg p-4 shadow-sm relative">
+            {promotions.map((promo) => (
+              <div
+                key={promo.id}
+                className="bg-white border border-[#E8E3E3] rounded-lg p-4 shadow-sm"
+              >
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <p className="font-dm-sans font-medium text-base text-[#303237] mb-1">{offer.title}</p>
-                    <p className="font-dm-sans text-sm text-[#454345]">{offer.offerId}</p>
+                    <p className="font-dm-sans font-medium text-base text-[#303237] mb-1">
+                      {promo.title || promo.offerTitle}
+                    </p>
+                    <p className="font-dm-sans text-sm text-[#454345]">
+                      {promo.offerId}
+                    </p>
                   </div>
                   <button
-                    onClick={(e) => handleActionClick(offer.id, e)}
+                    onClick={(e) => handleActionClick(promo.id, e)}
                     className="p-2 rounded-lg hover:bg-gray-100"
                   >
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-[#303237]">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      className="text-[#303237]"
+                    >
                       <circle cx="10" cy="5" r="2" fill="currentColor" />
                       <circle cx="10" cy="10" r="2" fill="currentColor" />
                       <circle cx="10" cy="15" r="2" fill="currentColor" />
@@ -218,37 +301,74 @@ const PromotionalOffersTable = ({ offers }: PromotionalOffersTableProps) => {
                 </div>
 
                 <div className="flex flex-wrap gap-2 mb-3">
-                  <div className={`inline-flex items-center px-2 py-1 rounded-lg text-xs ${getTypeStyles(offer.type)}`}>
-                    <span className="font-dm-sans font-medium">{offer.type}</span>
+                  <div
+                    className={`inline-flex items-center px-2 py-1 rounded-lg text-xs ${getTypeStyles(
+                      promo.type
+                    )}`}
+                  >
+                    <span className="font-dm-sans font-medium">{promo.type}</span>
                   </div>
-                  <div className={`inline-flex items-center px-2 py-1 rounded-lg text-xs ${getStatusStyles(offer.status)}`}>
-                    <span className="font-dm-sans font-medium">{offer.status}</span>
+                  <div
+                    className={`inline-flex items-center px-2 py-1 rounded-lg text-xs ${getStatusStyles(
+                      promo.status || "Draft"
+                    )}`}
+                  >
+                    <span className="font-dm-sans font-medium">
+                      {promo.status || "Draft"}
+                    </span>
                   </div>
                 </div>
 
                 <div className="space-y-2 text-sm">
-                  <p className="font-dm-sans text-[#454345]"><span className="font-medium text-[#303237]">User:</span> {offer.eligibleUser}</p>
-                  <p className="font-dm-sans text-[#454345]"><span className="font-medium text-[#303237]">Ends:</span> {offer.endDate}</p>
-                  <p className="font-dm-sans text-[#454345]"><span className="font-medium text-[#303237]">Redeemed:</span> {offer.redemptions.toLocaleString()}</p>
+                  <p className="font-dm-sans text-[#454345]">
+                    <span className="font-medium text-[#303237]">Users:</span>{" "}
+                    {promo.eligibleUser}
+                  </p>
+                  <p className="font-dm-sans text-[#454345]">
+                    <span className="font-medium text-[#303237]">Ends:</span>{" "}
+                    {promo.endDate}
+                  </p>
+                  <p className="font-dm-sans text-[#454345]">
+                    <span className="font-medium text-[#303237]">Redeemed:</span>{" "}
+                    {(promo.redemptions || 0).toLocaleString()}
+                  </p>
                 </div>
 
-                {openMenuId === offer.id && (
+                {openMenuId === promo.id && (
                   <div
-                    className="fixed w-42 bg-white rounded-[20px] shadow-[0px_8px_29px_0px_#5F5E5E30] border border-[#E5E7EF] overflow-hidden z-50"
-                    style={{ top: menuPosition.top, left: menuPosition.left }}
+                    className="fixed w-42 bg-white rounded-[20px] shadow-[0px_8px_29px_0px_#5F5E5E30] border border-[#E5E7EF] overflow-hidden z-50 mt-3"
+                    style={{
+                      top: menuPosition.top,
+                      left: menuPosition.left,
+                    }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <button onClick={() => handleView(offer)} className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition">
+                    <button
+                      onClick={() => handleView(promo)}
+                      className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
+                    >
                       <Eye className="w-4.5 h-4.5 text-[#454345]" />
-                      <span className="font-dm-sans text-base text-[#454345]">View Offer</span>
+                      <span className="font-dm-sans text-base text-[#454345]">
+                        View Offer
+                      </span>
                     </button>
-                    <button onClick={() => handleEdit(offer)} className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition">
+                    <button
+                      onClick={() => handleEdit(promo)}
+                      className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
+                    >
                       <Edit2 className="w-4.5 h-4.5 text-[#454345]" />
-                      <span className="font-dm-sans text-base text-[#454345]">Edit Offer</span>
+                      <span className="font-dm-sans text-base text-[#454345]">
+                        Edit Offer
+                      </span>
                     </button>
-                    <button onClick={() => handleDelete(offer)} className="w-full flex items-center gap-2.5 px-6 py-4.5 hover:bg-[#FAFAFA] transition text-red-600">
+                    <button
+                      onClick={() => handleDelete(promo)}
+                      className="w-full flex items-center gap-2.5 px-6 py-4.5 hover:bg-[#FAFAFA] transition text-red-600"
+                    >
                       <Trash2 className="w-4.5 h-4.5 text-red-600" />
-                      <span className="font-dm-sans text-base text-red-600">Delete Offer</span>
+                      <span className="font-dm-sans text-base text-red-600">
+                        Delete Offer
+                      </span>
                     </button>
                   </div>
                 )}
@@ -261,34 +381,35 @@ const PromotionalOffersTable = ({ offers }: PromotionalOffersTableProps) => {
       )}
 
       {/* View Detail Modal */}
-      <PromotionDetailModal
-        offer={detailOffer!}
-        isOpen={!!detailOffer}
-        onClose={() => setDetailOffer(null)}
-        onEdit={handleEditFromDetail}
-        onDelete={handleDeleteFromDetail}
-      />
+      {detailPromo && (
+        <PromotionDetailModal
+          offer={detailPromo}
+          isOpen={!!detailPromo}
+          onClose={() => setDetailPromo(null)}
+          onEdit={handleEditFromDetail}
+        />
+      )}
 
       {/* Edit Modal */}
       <CreatePromoOfferModal
         isOpen={isEditModalOpen}
         onClose={() => {
           setIsEditModalOpen(false);
-          setEditOffer(null);
+          setEditPromo(null);
         }}
-        offerToEdit={editOffer}
+        offerToEdit={editPromo}
         mode="edit"
       />
 
-      {/* Delete Confirmation Modal (from table dropdown) */}
+      {/* Delete Confirmation Modal */}
       <DeletePromotionModal
         isOpen={isDeleteModalOpen}
         onClose={() => {
           setIsDeleteModalOpen(false);
-          setDeleteOffer(null);
+          setDeletePromo(null);
         }}
         onConfirm={handleConfirmDelete}
-        offerTitle={deleteOffer?.title}
+        offerTitle={deletePromo?.offerTitle || deletePromo?.title}
       />
     </>
   );

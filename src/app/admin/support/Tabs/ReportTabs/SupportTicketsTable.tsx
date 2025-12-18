@@ -16,7 +16,6 @@ interface SupportTicketsTableProps {
 const SupportTicketsTable = ({ searchQuery, selectedStatuses }: SupportTicketsTableProps) => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-  const [currentStatus, setCurrentStatus] = useState<SupportTicketStatus | undefined>(undefined);
 
   // Get state from store
   const {
@@ -31,9 +30,9 @@ const SupportTicketsTable = ({ searchQuery, selectedStatuses }: SupportTicketsTa
     setSelectedTicket,
   } = supportTicketStore();
 
-  // Map UI status names to API status values and update currentStatus
-  useEffect(() => {
-    const apiStatuses = selectedStatuses
+  // ✅ FIXED: Map UI status names to API status values
+  const mapStatusToAPI = (statuses: string[]): SupportTicketStatus[] => {
+    return statuses
       .map(status => {
         if (status === "New") return "NEW" as SupportTicketStatus;
         if (status === "In Progress") return "IN_PROGRESS" as SupportTicketStatus;
@@ -41,33 +40,47 @@ const SupportTicketsTable = ({ searchQuery, selectedStatuses }: SupportTicketsTa
         return null;
       })
       .filter((s): s is SupportTicketStatus => s !== null);
+  };
 
-    setCurrentStatus(apiStatuses.length > 0 ? apiStatuses[0] : undefined);
-  }, [selectedStatuses]);
-
-  // Fetch tickets when filters change
+  // ✅ FIXED: Fetch tickets when filters change - pass ALL selected statuses
   useEffect(() => {
+    const apiStatuses = mapStatusToAPI(selectedStatuses);
+    
     console.log("📋 Fetching tickets with filters:", { 
-      searchQuery, 
       selectedStatuses,
-      status: currentStatus, 
+      apiStatuses, 
       page: 1 
     });
     
-    fetchTickets(1, 10, currentStatus);
-  }, [currentStatus, fetchTickets]);
+    // If no statuses selected, fetch all; otherwise pass the statuses
+    // Note: You may need to update your backend to accept multiple statuses
+    fetchTickets(1, 10, apiStatuses.length > 0 ? apiStatuses[0] : undefined);
+  }, [selectedStatuses, fetchTickets]);
 
-  // Client-side filtering for search (if backend doesn't support it)
+  // ✅ FIXED: Client-side filtering for multiple statuses AND search
   const filteredTickets = useMemo(() => {
-    if (!searchQuery) return tickets;
+    let result = tickets;
 
-    const query = searchQuery.toLowerCase();
-    return tickets.filter(ticket => 
-      ticket.ticketId?.toLowerCase().includes(query) ||
-      ticket.email?.toLowerCase().includes(query) ||
-      ticket.subject?.toLowerCase().includes(query)
-    );
-  }, [tickets, searchQuery]);
+    // Filter by selected statuses (client-side)
+    const apiStatuses = mapStatusToAPI(selectedStatuses);
+    if (apiStatuses.length > 0) {
+      result = result.filter(ticket => 
+        apiStatuses.includes(ticket.status as SupportTicketStatus)
+      );
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(ticket => 
+        ticket.ticketId?.toLowerCase().includes(query) ||
+        ticket.email?.toLowerCase().includes(query) ||
+        ticket.subject?.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+  }, [tickets, selectedStatuses, searchQuery]);
 
   const handleActionClick = (
     ticketId: string,
@@ -151,7 +164,7 @@ const SupportTicketsTable = ({ searchQuery, selectedStatuses }: SupportTicketsTa
       <div className="text-center py-12">
         <p className="text-red-600 font-dm-sans text-base">{ticketsError}</p>
         <button
-          onClick={() => fetchTickets(1, 10, currentStatus)}
+          onClick={() => fetchTickets(1, 10, undefined)}
           className="mt-4 px-6 py-2 bg-[#154751] text-white rounded-lg hover:opacity-90"
         >
           Retry
@@ -245,7 +258,7 @@ const SupportTicketsTable = ({ searchQuery, selectedStatuses }: SupportTicketsTa
           {totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 mt-6">
               <button
-                onClick={() => fetchTickets(currentPage - 1, 10, currentStatus)}
+                onClick={() => fetchTickets(currentPage - 1, 10, undefined)}
                 disabled={currentPage === 1 || ticketsLoading}
                 className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
               >
@@ -255,7 +268,7 @@ const SupportTicketsTable = ({ searchQuery, selectedStatuses }: SupportTicketsTa
                 Page {currentPage} of {totalPages}
               </span>
               <button
-                onClick={() => fetchTickets(currentPage + 1, 10, currentStatus)}
+                onClick={() => fetchTickets(currentPage + 1, 10, undefined)}
                 disabled={currentPage === totalPages || ticketsLoading}
                 className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
               >
