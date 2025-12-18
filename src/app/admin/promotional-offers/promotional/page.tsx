@@ -413,7 +413,9 @@ const PromotionalDashboard = () => {
           </>
         ) : (
           <div className="py-20">
-            <PromotionalEmptyState />
+            <PromotionalEmptyState 
+              onCreateOffer={() => setIsCreateModalOpen(true)}
+            />
           </div>
         )}
       </div>
