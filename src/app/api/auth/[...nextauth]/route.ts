@@ -13,7 +13,6 @@ async function refreshAccessToken(token: any): Promise<any> {
     }
 
     console.log("🔄 Attempting to refresh token...");
-    console.log("🔑 Refresh token:", token.refreshToken.substring(0, 20) + "...");
 
     const res = await fetch(`${baseUrl}/auth/refresh-token`, {
       method: "PATCH",
@@ -55,7 +54,6 @@ async function refreshAccessToken(token: any): Promise<any> {
   }
 }
 
-// --- NextAuth options ---
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
@@ -68,16 +66,10 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" }, 
         password: { label: "Password", type: "password" } 
       },
-      // ✅ FIXED: Proper authorize function with correct image handling
       async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) {
-          console.error("❌ Missing credentials");
-          return null;
-        }
+        if (!credentials?.email || !credentials.password) return null;
 
         try {
-          console.log("🔐 Attempting login for:", credentials.email);
-
           const res = await fetch(`${baseUrl}/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -88,39 +80,21 @@ export const authOptions: NextAuthOptions = {
           });
 
           let data = null;
-
           try {
             data = await res.json();
           } catch {
-            console.error("❌ Backend did not return JSON");
             return null;
           }
 
-          if (!res.ok) {
-            console.error("❌ Backend rejected login:", data.message);
+          if (!res.ok || !data.user?.id || !data.accessToken || !data.refreshToken) {
             return null;
           }
 
-          if (!data.user?.id) {
-            console.error("❌ Backend missing user.id");
-            return null;
-          }
-
-          if (!data.accessToken || !data.refreshToken) {
-            console.error("❌ Backend missing tokens");
-            return null;
-          }
-
-          console.log("✅ Login successful:", data.user.email);
-          console.log("✅ Profile picture received (first 50 chars):", data.user.profilePicture?.substring(0, 50));
-          console.log("📏 Profile picture length:", data.user.profilePicture?.length);
-
-          // ✅ CRITICAL: Return user with 'image' field for NextAuth
+          // ✅ DO NOT include image/base64 in returned user
           return {
             id: data.user.id.toString(),
             email: data.user.email,
             name: data.user.fullName,
-            image: data.user.profilePicture || "/images/user.png", // ✅ This is what NextAuth uses
             accessToken: data.accessToken,
             refreshToken: data.refreshToken,
           };
@@ -133,90 +107,44 @@ export const authOptions: NextAuthOptions = {
   ],
 
   callbacks: {
-    // ✅ FIXED: JWT callback - preserve image across token refresh
-    async jwt({ token, user, trigger }) {
-      console.log("🎫 JWT Callback triggered:", { 
-        trigger, 
-        hasUser: !!user,
-        hasTokenImage: !!token.image,
-        tokenImageStart: token.image?.toString().substring(0, 50)
-      });
-      
+    async jwt({ token, user }) {
       // Initial sign-in
       if (user) {
-        console.log("🆕 Initial sign-in - setting up token");
-        console.log("👤 User image (first 50 chars):", user.image?.substring(0, 50));
-        
         const userWithTokens = user as any;
-        
-        if (!userWithTokens.accessToken || !userWithTokens.refreshToken) {
-          console.error("❌ User object missing tokens!");
-          return {
-            ...token,
-            error: "MissingTokensFromAuthorize",
-          };
-        }
-
-        // ✅ CRITICAL: Store the image in the token
         return {
           ...token,
           id: user.id,
           email: user.email,
           name: user.name,
-          image: userWithTokens.image, // ✅ Keep the base64 image here
           accessToken: userWithTokens.accessToken,
           refreshToken: userWithTokens.refreshToken,
           accessTokenExpires: Date.now() + 15 * 60 * 1000,
-          error: undefined,
         };
       }
 
-      // Check if tokens exist
+      // Missing tokens
       if (!token.accessToken || !token.refreshToken) {
-        console.error("❌ Missing tokens in JWT callback");
-        return {
-          ...token,
-          error: "MissingTokens",
-        };
+        return { ...token, error: "MissingTokens" };
       }
 
-      // Token still valid
+      // Still valid
       if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
-        console.log("✅ Token still valid, expires in:", 
-          Math.floor((token.accessTokenExpires - Date.now()) / 1000), "seconds"
-        );
-        return token; // ✅ Return token as-is to preserve image
+        return token;
       }
 
-      // Token expired → refresh
-      console.log("⚠️ Token expired, refreshing...");
+      // Refresh
       return refreshAccessToken(token);
     },
 
-    // ✅ FIXED: Session callback - pass image correctly to session
     async session({ session, token }) {
-      console.log("📋 Session callback:", {
-        hasAccessToken: !!token.accessToken,
-        hasRefreshToken: !!token.refreshToken,
-        hasImage: !!token.image,
-        imageStart: token.image?.toString().substring(0, 50),
-        hasError: !!token.error,
-      });
-
       session.user = session.user || {};
       session.user.id = token.id as string;
       session.user.email = token.email as string;
       session.user.name = token.name as string;
-      session.user.image = token.image as string; // ✅ Pass the base64 image
+      // ✅ No image passed to session
       session.accessToken = token.accessToken as string;
       session.refreshToken = token.refreshToken as string;
       session.error = token.error;
-
-      if (token.error) {
-        console.warn("⚠️ Session has error:", token.error);
-      }
-
-      console.log("✅ Session image set (first 50 chars):", session.user.image?.substring(0, 50));
 
       return session;
     },
@@ -228,7 +156,6 @@ export const authOptions: NextAuthOptions = {
   },
 
   secret: process.env.NEXTAUTH_SECRET,
-  
   debug: process.env.NODE_ENV === "development",
 };
 

@@ -11,7 +11,7 @@ export default function Home() {
   useEffect(() => {
     // If not authenticated, redirect to login
     if (status === "unauthenticated") {
-      router.push("/auth/signin");
+      router.push("/auth/sign-in");
     }
     // If authenticated, redirect to admin dashboard
     else if (status === "authenticated") {
