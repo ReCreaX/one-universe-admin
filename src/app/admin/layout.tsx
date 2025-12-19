@@ -4,8 +4,9 @@ import { LogIn, ChevronDown, ChevronRight, Bell, Menu, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSession } from "next-auth/react";
 import { Separator } from "@/components/ui/separator";
 import { SideBarLinks } from "@/data/layoutSidebarData";
 import authService from "@/services/authService";
@@ -18,11 +19,58 @@ export default function AdminDashboardLayout({
 }>) {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session } = useSession();
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { showToast } = useToastStore();
+  
+  // ✅ IMPROVED: Get profile picture from multiple sources
+  const [userProfilePicture, setUserProfilePicture] = useState<string>("/images/user.png");
+
+  useEffect(() => {
+    const loadUserProfile = () => {
+      try {
+        // Priority 1: Try NextAuth session
+        if (session?.user?.image) {
+          console.log("✅ Profile picture from NextAuth session:", session.user.image);
+          setUserProfilePicture(session.user.image);
+          // Save to localStorage for persistence
+          const userStr = localStorage.getItem("user");
+          if (userStr) {
+            const user = JSON.parse(userStr);
+            user.profilePicture = session.user.image;
+            localStorage.setItem("user", JSON.stringify(user));
+          }
+          return;
+        }
+
+        // Priority 2: Try localStorage
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          if (user?.profilePicture) {
+            console.log("✅ Profile picture from localStorage:", user.profilePicture);
+            setUserProfilePicture(user.profilePicture);
+            return;
+          }
+        }
+
+        // Priority 3: Default image
+        console.log("⚠️ Using default profile picture");
+        setUserProfilePicture("/images/user.png");
+      } catch (error) {
+        console.error("❌ Error loading user profile:", error);
+        setUserProfilePicture("/images/user.png");
+      }
+    };
+
+    loadUserProfile();
+  }, [session?.user?.image]);
+
   const handleLogOut = async () => {
-    // Add your logout logic here
+    // Clear localStorage when logging out
+    localStorage.removeItem("user");
+    
     const response = await authService.signout();
     if (response.success) {
       showToast(
@@ -43,10 +91,14 @@ export default function AdminDashboardLayout({
             <div className="flex items-center justify-between mb-4">
               <div className="relative size-[50px]">
                 <Image
-                  src="/images/user.png"
-                  alt="User"
+                  src={userProfilePicture}
+                  alt="User Profile"
                   fill
                   className="rounded-full object-cover"
+                  priority
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/images/user.png";
+                  }}
                 />
               </div>
               <button
@@ -291,10 +343,14 @@ export default function AdminDashboardLayout({
 
             <div className="relative size-[40px] ml-6">
               <Image
-                src="/images/user.png"
-                alt="User"
+                src={userProfilePicture}
+                alt="User Profile"
                 fill
                 className="rounded-full object-cover"
+                priority
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/images/user.png";
+                }}
               />
             </div>
           </section>
@@ -326,7 +382,7 @@ export default function AdminDashboardLayout({
           </section>
         </header>
 
-        <section className="  px-2.5  md:px-5 mt-[25px]">{children}</section>
+        <section className="px-2.5 md:px-5 mt-[25px]">{children}</section>
       </section>
     </main>
   );

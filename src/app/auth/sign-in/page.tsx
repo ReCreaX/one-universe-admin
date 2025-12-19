@@ -146,12 +146,33 @@ function SignInForm() {
 
         startResetTimer();
       } else if (result?.ok) {
-        // Login successful
-        showToast("success", "Login Successful", "Redirecting...", 3000);
-        resetLoginAttempts();
-
+        // ✅ Login successful - Save user data to localStorage
+        console.log("✅ Login successful, saving user data...");
+        
         // Wait for session to be established
         await new Promise((resolve) => setTimeout(resolve, 500));
+        
+        // Get the session data
+        const sessionData = await fetch("/api/auth/session").then(res => res.json());
+        
+        if (sessionData?.user) {
+          // ✅ Save user to localStorage with profile picture
+          const userData = {
+            id: sessionData.user.id,
+            email: sessionData.user.email,
+            fullName: sessionData.user.name,
+            profilePicture: sessionData.user.image || "/images/user.png",
+            accessToken: sessionData.accessToken,
+            refreshToken: sessionData.refreshToken,
+          };
+          
+          localStorage.setItem("user", JSON.stringify(userData));
+          console.log("✅ User data saved to localStorage:", userData);
+          console.log("✅ Profile picture URL:", userData.profilePicture);
+        }
+
+        showToast("success", "Login Successful", "Redirecting...", 3000);
+        resetLoginAttempts();
 
         const callbackUrl = searchParams.get("callbackUrl") || "/admin";
         router.replace(callbackUrl);

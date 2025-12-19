@@ -15,12 +15,11 @@ async function refreshAccessToken(token: any): Promise<any> {
     console.log("🔄 Attempting to refresh token...");
     console.log("🔑 Refresh token:", token.refreshToken.substring(0, 20) + "...");
 
-    // Your backend expects the refresh token in a cookie named 'refresh_token'
     const res = await fetch(`${baseUrl}/auth/refresh-token`, {
       method: "PATCH",
       headers: { 
         "Content-Type": "application/json",
-        "Cookie": `refresh_token=${token.refreshToken}` // Send as cookie
+        "Cookie": `refresh_token=${token.refreshToken}`
       },
     });
 
@@ -44,7 +43,7 @@ async function refreshAccessToken(token: any): Promise<any> {
       ...token,
       accessToken: data.accessToken,
       refreshToken: data.refreshToken || token.refreshToken,
-      accessTokenExpires: Date.now() + 5 * 60 * 1000, // 5 min
+      accessTokenExpires: Date.now() + 5 * 60 * 1000,
       error: undefined,
     };
   } catch (error: any) {
@@ -60,7 +59,7 @@ async function refreshAccessToken(token: any): Promise<any> {
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
   providers: [
     CredentialsProvider({
@@ -69,76 +68,84 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" }, 
         password: { label: "Password", type: "password" } 
       },
-     async authorize(credentials) {
-  if (!credentials?.email || !credentials.password) {
-    console.error("❌ Missing credentials");
-    return null;
-  }
+      // ✅ FIXED: Proper authorize function with correct image handling
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials.password) {
+          console.error("❌ Missing credentials");
+          return null;
+        }
 
-  try {
-    console.log("🔐 Attempting login for:", credentials.email);
+        try {
+          console.log("🔐 Attempting login for:", credentials.email);
 
-    const res = await fetch(`${baseUrl}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: credentials.email,
-        password: credentials.password,
-      }),
-    });
+          const res = await fetch(`${baseUrl}/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+          });
 
-    let data = null;
+          let data = null;
 
-    try {
-      data = await res.json();
-    } catch {
-      console.error("❌ Backend did not return JSON");
-      return null;
-    }
+          try {
+            data = await res.json();
+          } catch {
+            console.error("❌ Backend did not return JSON");
+            return null;
+          }
 
-    // console.log("📥 Login API response:", data);
+          if (!res.ok) {
+            console.error("❌ Backend rejected login:", data.message);
+            return null;
+          }
 
-    if (!res.ok) {
-      console.error("❌ Backend rejected login:", data.message);
-      return null;
-    }
+          if (!data.user?.id) {
+            console.error("❌ Backend missing user.id");
+            return null;
+          }
 
-    if (!data.user?.id) {
-      console.error("❌ Backend missing user.id");
-      return null;
-    }
+          if (!data.accessToken || !data.refreshToken) {
+            console.error("❌ Backend missing tokens");
+            return null;
+          }
 
-    if (!data.accessToken || !data.refreshToken) {
-      console.error("❌ Backend missing tokens");
-      return null;
-    }
+          console.log("✅ Login successful:", data.user.email);
+          console.log("✅ Profile picture received (first 50 chars):", data.user.profilePicture?.substring(0, 50));
+          console.log("📏 Profile picture length:", data.user.profilePicture?.length);
 
-    console.log("✅ Login successful:", data.user.email);
-
-    return {
-      id: data.user.id.toString(),
-      email: data.user.email,
-      name: data.user.fullName,
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
-    };
-  } catch (err) {
-    console.error("❌ Authorization error:", err);
-    return null;
-  }
-}
-
+          // ✅ CRITICAL: Return user with 'image' field for NextAuth
+          return {
+            id: data.user.id.toString(),
+            email: data.user.email,
+            name: data.user.fullName,
+            image: data.user.profilePicture || "/images/user.png", // ✅ This is what NextAuth uses
+            accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
+          };
+        } catch (err) {
+          console.error("❌ Authorization error:", err);
+          return null;
+        }
+      }
     }),
   ],
 
   callbacks: {
-    // --- JWT callback ---
+    // ✅ FIXED: JWT callback - preserve image across token refresh
     async jwt({ token, user, trigger }) {
-      console.log("🎫 JWT Callback triggered:", { trigger, hasUser: !!user });
+      console.log("🎫 JWT Callback triggered:", { 
+        trigger, 
+        hasUser: !!user,
+        hasTokenImage: !!token.image,
+        tokenImageStart: token.image?.toString().substring(0, 50)
+      });
       
       // Initial sign-in
       if (user) {
         console.log("🆕 Initial sign-in - setting up token");
+        console.log("👤 User image (first 50 chars):", user.image?.substring(0, 50));
         
         const userWithTokens = user as any;
         
@@ -150,14 +157,16 @@ export const authOptions: NextAuthOptions = {
           };
         }
 
+        // ✅ CRITICAL: Store the image in the token
         return {
           ...token,
           id: user.id,
           email: user.email,
           name: user.name,
+          image: userWithTokens.image, // ✅ Keep the base64 image here
           accessToken: userWithTokens.accessToken,
           refreshToken: userWithTokens.refreshToken,
-          accessTokenExpires: Date.now() + 15 * 60 * 1000, // 15 min (matches your JWT expiry)
+          accessTokenExpires: Date.now() + 15 * 60 * 1000,
           error: undefined,
         };
       }
@@ -176,7 +185,7 @@ export const authOptions: NextAuthOptions = {
         console.log("✅ Token still valid, expires in:", 
           Math.floor((token.accessTokenExpires - Date.now()) / 1000), "seconds"
         );
-        return token;
+        return token; // ✅ Return token as-is to preserve image
       }
 
       // Token expired → refresh
@@ -184,11 +193,13 @@ export const authOptions: NextAuthOptions = {
       return refreshAccessToken(token);
     },
 
-    // --- Session callback ---
+    // ✅ FIXED: Session callback - pass image correctly to session
     async session({ session, token }) {
       console.log("📋 Session callback:", {
         hasAccessToken: !!token.accessToken,
         hasRefreshToken: !!token.refreshToken,
+        hasImage: !!token.image,
+        imageStart: token.image?.toString().substring(0, 50),
         hasError: !!token.error,
       });
 
@@ -196,6 +207,7 @@ export const authOptions: NextAuthOptions = {
       session.user.id = token.id as string;
       session.user.email = token.email as string;
       session.user.name = token.name as string;
+      session.user.image = token.image as string; // ✅ Pass the base64 image
       session.accessToken = token.accessToken as string;
       session.refreshToken = token.refreshToken as string;
       session.error = token.error;
@@ -203,6 +215,8 @@ export const authOptions: NextAuthOptions = {
       if (token.error) {
         console.warn("⚠️ Session has error:", token.error);
       }
+
+      console.log("✅ Session image set (first 50 chars):", session.user.image?.substring(0, 50));
 
       return session;
     },
@@ -218,6 +232,5 @@ export const authOptions: NextAuthOptions = {
   debug: process.env.NODE_ENV === "development",
 };
 
-// --- Export handler for Next.js API routes ---
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };

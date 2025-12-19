@@ -102,9 +102,47 @@ class ServiceManagementService {
   }
 
   /**
+   * Approve service(s) - intelligently chooses single or bulk endpoint
+   */
+  async approveServices(ids: string[]): Promise<void> {
+    if (ids.length === 0) {
+      throw new Error("No services selected for approval");
+    }
+
+    // Single service - use individual endpoint
+    if (ids.length === 1) {
+      console.log(`✅ Approving single service: ${ids[0]}`);
+      await this.approveSingleService(ids[0]);
+    } else {
+      // Multiple services - use bulk endpoint
+      console.log(`✅ Approving ${ids.length} services via bulk endpoint`);
+      await this.bulkApproveServices(ids);
+    }
+  }
+
+  /**
+   * Reject service(s) - intelligently chooses single or bulk endpoint
+   */
+  async rejectServices(ids: string[], reason?: string): Promise<void> {
+    if (ids.length === 0) {
+      throw new Error("No services selected for rejection");
+    }
+
+    // Single service - use individual endpoint
+    if (ids.length === 1) {
+      console.log(`✅ Rejecting single service: ${ids[0]}`);
+      await this.rejectSingleService(ids[0], reason);
+    } else {
+      // Multiple services - use bulk endpoint
+      console.log(`✅ Rejecting ${ids.length} services via bulk endpoint`);
+      await this.bulkRejectServices(ids, reason);
+    }
+  }
+
+  /**
    * Approve a single service
    */
-  async approveService(id: string): Promise<void> {
+  private async approveSingleService(id: string): Promise<void> {
     const endpoint = `/master-services/${encodeURIComponent(id)}/approve`;
     await this.request(endpoint, {
       method: "PATCH",
@@ -114,7 +152,7 @@ class ServiceManagementService {
   /**
    * Reject a single service with reason
    */
-  async rejectService(id: string, reason?: string): Promise<void> {
+  private async rejectSingleService(id: string, reason?: string): Promise<void> {
     const endpoint = `/master-services/${encodeURIComponent(id)}/reject`;
     await this.request(endpoint, {
       method: "PATCH",
@@ -125,7 +163,7 @@ class ServiceManagementService {
   /**
    * Bulk approve multiple services
    */
-  async bulkApprove(ids: string[]): Promise<void> {
+  async bulkApproveServices(ids: string[]): Promise<void> {
     const endpoint = "/master-services/bulk-approve";
     await this.request(endpoint, {
       method: "POST",
@@ -136,30 +174,61 @@ class ServiceManagementService {
   /**
    * Bulk reject multiple services with reason
    */
-  async bulkReject(ids: string[], reason?: string): Promise<void> {
+  async bulkRejectServices(ids: string[], reason?: string): Promise<void> {
     const endpoint = "/master-services/bulk-reject";
     await this.request(endpoint, {
       method: "POST",
       body: JSON.stringify({ ids, reason }),
     });
   }
+
+  /**
+   * Public methods for backward compatibility
+   */
+  async approveService(id: string): Promise<void> {
+    return this.approveSingleService(id);
+  }
+
+  async rejectService(id: string, reason?: string): Promise<void> {
+    return this.rejectSingleService(id, reason);
+  }
+
+  async bulkApprove(ids: string[]): Promise<void> {
+    return this.bulkApproveServices(ids);
+  }
+
+  async bulkReject(ids: string[], reason?: string): Promise<void> {
+    return this.bulkRejectServices(ids, reason);
+  }
 }
 
 // Export singleton instance
 export const serviceManagementService = new ServiceManagementService();
 
-// Export legacy function names for backward compatibility
+// ============================================
+// PUBLIC EXPORTS - BACKWARD COMPATIBLE
+// ============================================
+
 export const fetchServicesByStatus = () =>
   serviceManagementService.fetchServicesByStatus();
 
+// Single service operations
 export const approveService = (id: string) =>
   serviceManagementService.approveService(id);
 
 export const rejectService = (id: string, reason?: string) =>
   serviceManagementService.rejectService(id, reason);
 
+// Bulk operations
 export const bulkApprove = (ids: string[]) =>
   serviceManagementService.bulkApprove(ids);
 
 export const bulkReject = (ids: string[], reason?: string) =>
   serviceManagementService.bulkReject(ids, reason);
+
+// NEW - Smart routing (uses correct endpoint based on count)
+export const approveServices = (ids: string[]) =>
+  serviceManagementService.approveServices(ids);
+
+export const rejectServices = (ids: string[], reason?: string) =>
+  serviceManagementService.rejectServices(ids, reason);

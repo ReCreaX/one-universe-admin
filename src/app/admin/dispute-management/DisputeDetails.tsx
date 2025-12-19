@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock3, Download, X } from "lucide-react";
 import { disputeModalStore } from "@/store/disputeManagementStore";
@@ -20,6 +20,19 @@ const DisputeDetailsModal = () => {
   const [downloading, setDownloading] = useState<string | null>(null);
 
   const dispute = selectedDispute;
+
+  // Clear error and reset form when dispute changes or modal closes
+  useEffect(() => {
+    if (modalType !== "openDispute" || !dispute) {
+      // Reset state when modal closes or dispute changes
+      setError(null);
+      setResolution("");
+      setComment("");
+      setBuyerPercentage(50);
+      setResolving(false);
+      setDownloading(null);
+    }
+  }, [modalType, dispute?.id]); // Reset when dispute ID changes
 
   const resolutionOptions = [
     {
@@ -45,6 +58,8 @@ const DisputeDetailsModal = () => {
     if (selected) {
       setResolution(selected.value);
     }
+    // Clear error when user interacts with form
+    setError(null);
   };
 
   const handleDownloadEvidence = async (url: string, fileName: string) => {
@@ -128,7 +143,7 @@ const DisputeDetailsModal = () => {
         disputesMeta?.limit || 50
       );
 
-      // Show success message
+      // Clear error on success
       setError(null);
       console.log("Dispute resolved successfully:", response);
 
@@ -144,6 +159,17 @@ const DisputeDetailsModal = () => {
     } finally {
       setResolving(false);
     }
+  };
+
+  const handleCloseModal = () => {
+    // Clear all state before closing
+    setError(null);
+    setResolution("");
+    setComment("");
+    setBuyerPercentage(50);
+    setResolving(false);
+    setDownloading(null);
+    closeModal();
   };
 
   return (
@@ -168,7 +194,7 @@ const DisputeDetailsModal = () => {
               </h2>
               <button
                 title="Close modal"
-                onClick={closeModal}
+                onClick={handleCloseModal}
                 className="text-gray-500 hover:text-black"
               >
                 <X size={18} />
@@ -374,9 +400,14 @@ const DisputeDetailsModal = () => {
                 </div>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-[8px] p-4">
+                  <motion.div
+                    className="bg-red-50 border border-red-200 rounded-[8px] p-4"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
                     <p className="text-red-600 font-medium">{error}</p>
-                  </div>
+                  </motion.div>
                 )}
 
                 {dispute.status !== "RESOLVED" ? (
@@ -409,9 +440,10 @@ const DisputeDetailsModal = () => {
                             min="0"
                             max="70"
                             value={buyerPercentage}
-                            onChange={(e) =>
-                              setBuyerPercentage(Number(e.target.value))
-                            }
+                            onChange={(e) => {
+                              setBuyerPercentage(Number(e.target.value));
+                              setError(null);
+                            }}
                             className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                           />
                           <input
@@ -425,6 +457,7 @@ const DisputeDetailsModal = () => {
                                 70
                               );
                               setBuyerPercentage(value);
+                              setError(null);
                             }}
                             className="w-16 px-2 py-1 border border-gray-300 rounded-lg"
                           />
@@ -443,7 +476,10 @@ const DisputeDetailsModal = () => {
                       <textarea
                         placeholder="Add detailed explanation for your resolution decision"
                         value={comment}
-                        onChange={(e) => setComment(e.target.value)}
+                        onChange={(e) => {
+                          setComment(e.target.value);
+                          setError(null);
+                        }}
                         className="outline-none border border-[#B2B2B4] py-[11px] px-[16px] rounded-[12px] h-[123px] resize-none placeholder-[#B2B2B4] text-[14px] placeholder:font-normal focus:border-[#154751] focus:ring-2 focus:ring-[#154751]/20 transition"
                       />
                     </div>
