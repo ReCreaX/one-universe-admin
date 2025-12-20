@@ -12,6 +12,7 @@ import { SideBarLinks } from "@/data/layoutSidebarData";
 import authService from "@/services/authService";
 import useToastStore from "@/store/useToastStore";
 import { userDetailsStore } from "@/store/userDetailsStore";
+import NotificationsPanel from "./notification/NotificationsPanel";
 
 export default function AdminDashboardLayout({
   children,
@@ -23,6 +24,7 @@ export default function AdminDashboardLayout({
   const { data: session } = useSession();
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { showToast } = useToastStore();
 
   // ✅ Get profile picture and loading state from the store
@@ -380,8 +382,8 @@ export default function AdminDashboardLayout({
           </section>
 
           <section className="flex items-center justify-between">
-            <aside className="relative ml-auto">
-              <Bell className="size-[23px] text-[#373737]" />
+            <aside className="relative ml-auto cursor-pointer" onClick={() => setIsNotificationsOpen(true)}>
+              <Bell className="size-[23px] text-[#373737] hover:text-[#154751] transition-colors" />
               <span className="absolute top-1 right-[2px] w-2 h-2 rounded-full bg-[#D84040] border border-white"></span>
             </aside>
             <Separator orientation="vertical" className="mx-4 h-6" />
@@ -411,8 +413,8 @@ export default function AdminDashboardLayout({
           />
 
           <section className="flex items-center justify-between gap-[20px]">
-            <aside className="relative ml-auto">
-              <Bell className="size-[23px] text-[#6B6969]" />
+            <aside className="relative ml-auto cursor-pointer" onClick={() => setIsNotificationsOpen(true)}>
+              <Bell className="size-[23px] text-[#6B6969] hover:text-[#154751] transition-colors" />
               <span className="absolute top-1 right-[2px] w-2 h-2 rounded-full bg-[#D84040] border border-white"></span>
             </aside>
 
@@ -429,6 +431,45 @@ export default function AdminDashboardLayout({
 
         <section className="px-2.5 md:px-5 mt-[25px]">{children}</section>
       </section>
+
+      {/* Notifications Modal */}
+      <AnimatePresence>
+        {isNotificationsOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+              onClick={() => setIsNotificationsOpen(false)}
+            />
+
+            {/* Notifications Panel */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+              className="fixed top-20 right-6 md:right-8 z-50 max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative">
+                <NotificationsPanel />
+                {/* Close button */}
+                <button
+                  onClick={() => setIsNotificationsOpen(false)}
+                  className="absolute top-4 right-4 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                  aria-label="Close notifications"
+                >
+                  <X size={20} className="text-[#6B6969]" />
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
