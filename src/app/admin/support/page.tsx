@@ -77,6 +77,7 @@ const AdminSupportPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showRatingsFilter, setShowRatingsFilter] = useState(false);
 
+  // ✅ FIXED: Initialize with all statuses selected
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([
     "New",
     "In Progress",
@@ -87,12 +88,28 @@ const AdminSupportPage = () => {
   // Get total tickets from store
   const { totalTickets } = supportTicketStore();
 
+  // ✅ FIXED: Proper toggle function with console logging
   const toggleStatus = (status: string) => {
-    setSelectedStatuses((prev) =>
-      prev.includes(status)
+    setSelectedStatuses((prev) => {
+      const updated = prev.includes(status)
         ? prev.filter((s) => s !== status)
-        : [...prev, status]
-    );
+        : [...prev, status];
+      
+      console.log("✅ Status filter updated:", updated);
+      return updated;
+    });
+  };
+
+  // ✅ FIXED: Log when search changes
+  const handleSearchChange = (query: string) => {
+    console.log("🔍 Search query updated:", query);
+    setSearchQuery(query);
+  };
+
+  // ✅ FIXED: Log when tab changes
+  const handleTabChange = (tab: string) => {
+    console.log("📋 Tab changed to:", tab);
+    setActiveTab(tab);
   };
 
   return (
@@ -109,7 +126,7 @@ const AdminSupportPage = () => {
           </div>
         </header>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="w-[363px] h-[46px] bg-transparent border-b border-[#E8E3E3] rounded-none p-0 mb-8">
             <TabsTrigger
               value="reported-issues"
@@ -143,7 +160,7 @@ const AdminSupportPage = () => {
                     type="text"
                     placeholder="Search by username, subject, or ticket ID"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="w-full h-12 pl-12 pr-4 border border-[#B7B6B7] rounded-lg font-inter text-base placeholder:text-[#7B7B7B] focus:outline-none focus:border-[#04171F] transition"
                   />
                   <Search size={24} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7B7B7B]" />
@@ -154,7 +171,9 @@ const AdminSupportPage = () => {
                     onClick={() => setShowStatusFilter(!showStatusFilter)}
                     className="flex items-center gap-2 h-[38px] px-4 border border-[#B5B1B1] rounded-lg hover:bg-gray-50 transition"
                   >
-                    <span className="font-dm-sans text-base text-[#171417]">Status</span>
+                    <span className="font-dm-sans text-base text-[#171417]">
+                      Status {selectedStatuses.length < 3 && `(${selectedStatuses.length})`}
+                    </span>
                     <ChevronDown
                       size={16}
                       className={`text-[#171417] transition-transform ${showStatusFilter ? "rotate-180" : ""}`}

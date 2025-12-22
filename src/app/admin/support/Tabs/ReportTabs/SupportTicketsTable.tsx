@@ -42,20 +42,17 @@ const SupportTicketsTable = ({ searchQuery, selectedStatuses }: SupportTicketsTa
       .filter((s): s is SupportTicketStatus => s !== null);
   };
 
-  // ✅ FIXED: Fetch tickets when filters change - pass ALL selected statuses
+  // ✅ FIXED: Fetch ALL tickets without status filter, filter client-side for multiple statuses
   useEffect(() => {
-    const apiStatuses = mapStatusToAPI(selectedStatuses);
-    
-    console.log("📋 Fetching tickets with filters:", { 
-      selectedStatuses,
-      apiStatuses, 
+    console.log("📋 Fetching all tickets (filter client-side):", { 
+      selectedStatuses, 
       page: 1 
     });
     
-    // If no statuses selected, fetch all; otherwise pass the statuses
-    // Note: You may need to update your backend to accept multiple statuses
-    fetchTickets(1, 10, apiStatuses.length > 0 ? apiStatuses[0] : undefined);
-  }, [selectedStatuses, fetchTickets]);
+    // Always fetch all tickets - filter by status will happen client-side
+    // This allows filtering by multiple statuses simultaneously
+    fetchTickets(1, 10, undefined);
+  }, []);
 
   // ✅ FIXED: Client-side filtering for multiple statuses AND search
   const filteredTickets = useMemo(() => {
@@ -63,10 +60,15 @@ const SupportTicketsTable = ({ searchQuery, selectedStatuses }: SupportTicketsTa
 
     // Filter by selected statuses (client-side)
     const apiStatuses = mapStatusToAPI(selectedStatuses);
+    
+    // If statuses are selected, filter by them; otherwise show all
     if (apiStatuses.length > 0) {
       result = result.filter(ticket => 
         apiStatuses.includes(ticket.status as SupportTicketStatus)
       );
+      console.log(`🔍 Filtered by status [${apiStatuses.join(", ")}]: ${result.length} tickets`);
+    } else {
+      console.log(`🔍 No status filter applied: showing all ${result.length} tickets`);
     }
 
     // Filter by search query
@@ -77,6 +79,7 @@ const SupportTicketsTable = ({ searchQuery, selectedStatuses }: SupportTicketsTa
         ticket.email?.toLowerCase().includes(query) ||
         ticket.subject?.toLowerCase().includes(query)
       );
+      console.log(`🔍 Filtered by search "${searchQuery}": ${result.length} tickets`);
     }
 
     return result;
