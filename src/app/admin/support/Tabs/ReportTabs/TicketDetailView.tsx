@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { supportTicketStore } from "@/store/supportTicketStore";
 import { SupportTicketResponse } from "@/services/supportService";
+import useToastStore from "@/store/useToastStore"; // Your toast store
 
 interface TicketDetailViewProps {
   ticket: SupportTicketResponse;
@@ -14,8 +15,6 @@ const TicketDetailView = ({ ticket, onClose }: TicketDetailViewProps) => {
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Simple direct subscription – no selector, no shallow (removes all TS errors)
-  // This is the most reliable way when you only need a few actions and want zero type issues
   const {
     respondToTicket,
     markAsResolved,
@@ -23,21 +22,51 @@ const TicketDetailView = ({ ticket, onClose }: TicketDetailViewProps) => {
     respondError,
   } = supportTicketStore();
 
-  const handleResponseChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setResponse(e.target.value);
-    },
-    []
-  );
+  const toast = useToastStore();
 
-  // Fixes the "type one character then lose focus" bug permanently
+  // Focus textarea when modal opens
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-      const length = textareaRef.current.value.length;
-      textareaRef.current.setSelectionRange(length, length);
+    const timer = setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleResponseChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setResponse(e.target.value);
+  };
+
+  const handleSendResponse = async () => {
+    if (!response.trim() || !ticket.id) return;
+
+    const success = await respondToTicket(ticket.id, response.trim());
+
+    if (success) {
+      setResponse(""); // Clear input
+      toast.showToast(
+        "success",
+        "Response Sent",
+        "Your message has been sent to the user via email."
+      );
+      // Modal stays open so you can send more responses if needed
+      // If you prefer to close: onClose();
     }
-  }, [response]);
+  };
+
+  const handleMarkAsResolved = async () => {
+    if (!ticket.id) return;
+
+    const success = await markAsResolved(ticket.id);
+
+    if (success) {
+      toast.showToast(
+        "success",
+        "Ticket Resolved",
+        "This ticket has been marked as resolved."
+      );
+      onClose(); // Close modal after resolving
+    }
+  };
 
   const getStatusStyles = (status: string) => {
     switch (status) {
@@ -78,27 +107,8 @@ const TicketDetailView = ({ ticket, onClose }: TicketDetailViewProps) => {
     );
   };
 
-  const handleSendResponse = async () => {
-    if (response.trim() && ticket.id) {
-      const success = await respondToTicket(ticket.id, response.trim());
-      if (success) {
-        setResponse("");
-      }
-    }
-  };
-
-  const handleMarkAsResolved = async () => {
-    if (ticket.id) {
-      const success = await markAsResolved(ticket.id);
-      if (success) {
-        onClose();
-      }
-    }
-  };
-
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
+    return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -108,132 +118,88 @@ const TicketDetailView = ({ ticket, onClose }: TicketDetailViewProps) => {
   };
 
   const hasAdminResponse =
-    ticket.adminResponse && ticket.adminResponse.trim().length > 0;
+    typeof ticket.adminResponse === "string" && ticket.adminResponse.trim().length > 0;
 
   const handleDownload = async (fileUrl: string) => {
     try {
       setDownloadingFile(fileUrl);
+      const fileName = fileUrl.split("/").pop()?.split("?")[0] ?? "download";
 
-      const urlParts = fileUrl.split("/");
-      const fileNameWithExt = urlParts[urlParts.length - 1];
-      const fileName = fileNameWithExt.split("?")[0];
+      const res = await fetch(`/api/admin/download-document?url=${encodeURIComponent(fileUrl)}`, {
+        credentials: "include",
+      });
 
-      const response = await fetch(
-        `/api/admin/download-document?url=${encodeURIComponent(fileUrl)}`,
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      );
+      if (!res.ok) throw new Error(await res.text() || "Download failed");
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Download failed");
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Download error:", error);
-      alert(
-        `Failed to download file: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      toast.showToast(
+        "error",
+        "Download Failed",
+        err instanceof Error ? err.message : "Unknown error"
       );
     } finally {
       setDownloadingFile(null);
     }
   };
 
-  const ModalContent = () => (
+  const modalContent = (
     <>
       {/* Header */}
       <div className="bg-[#E8FBF7] px-6 py-5 md:px-8 md:py-6 border-b border-[#E8E3E3] flex items-center justify-between sticky top-0 z-10">
         <h2 className="font-dm-sans font-bold text-xl leading-[140%] text-[#171417]">
           Ticket ID: {ticket.ticketId}
         </h2>
-        <button
-          onClick={onClose}
-          className="p-1 hover:bg-white rounded-lg transition-colors"
-        >
+        <button onClick={onClose} className="p-1 hover:bg-white rounded-lg transition-colors">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M18 6L6 18M6 6L18 18"
-              stroke="#171417"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
+            <path d="M18 6L6 18M6 6L18 18" stroke="#171417" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
       </div>
 
-      {/* Main Content */}
-      <div className="px-4 py-6 md:px-8 space-y-8">
+      {/* Body */}
+      <div className="px-4 py-6 md:px-8 space-y-8 overflow-y-auto">
         {/* Ticket Details */}
         <div className="space-y-5">
           <div className="flex items-start gap-4">
-            <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">
-              Email
-            </span>
-            <span className="font-dm-sans font-medium text-base text-[#454345]">
-              {ticket.email}
-            </span>
+            <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">Email</span>
+            <span className="font-dm-sans font-medium text-base text-[#454345]">{ticket.email}</span>
           </div>
 
           <div className="flex items-start gap-4">
-            <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">
-              Status
-            </span>
-            <div
-              className={`inline-flex items-center gap-[6px] px-2 py-1 rounded-lg ${getStatusStyles(
-                ticket.status
-              )}`}
-            >
+            <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">Status</span>
+            <div className={`inline-flex items-center gap-[6px] px-2 py-1 rounded-lg ${getStatusStyles(ticket.status)}`}>
               <StatusIcon status={ticket.status} />
-              <span className="font-dm-sans text-sm leading-[140%]">
-                {ticket.status.replace("_", " ")}
-              </span>
+              <span className="font-dm-sans text-sm leading-[140%]">{ticket.status.replace("_", " ")}</span>
             </div>
           </div>
 
           <div className="flex items-start gap-4">
-            <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">
-              Submitted on
-            </span>
-            <span className="font-dm-sans text-base text-[#454345]">
-              {formatDate(ticket.createdAt)}
-            </span>
+            <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">Submitted on</span>
+            <span className="font-dm-sans text-base text-[#454345]">{formatDate(ticket.createdAt)}</span>
           </div>
 
           {ticket.respondedAt && (
             <div className="flex items-start gap-4">
-              <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">
-                Responded on
-              </span>
-              <span className="font-dm-sans text-base text-[#454345]">
-                {formatDate(ticket.respondedAt)}
-              </span>
+              <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">Responded on</span>
+              <span className="font-dm-sans text-base text-[#454345]">{formatDate(ticket.respondedAt)}</span>
             </div>
           )}
 
           <div className="flex items-start gap-4">
-            <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">
-              Subject
-            </span>
+            <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">Subject</span>
             <span className="font-dm-sans text-base text-[#454345]">{ticket.subject}</span>
           </div>
 
           <div className="flex items-start gap-4">
-            <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">
-              Description
-            </span>
+            <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">Description</span>
             <span className="font-dm-sans text-base text-[#454345] leading-[140%] whitespace-pre-wrap">
               {ticket.description}
             </span>
@@ -241,9 +207,7 @@ const TicketDetailView = ({ ticket, onClose }: TicketDetailViewProps) => {
 
           {ticket.screenshotUrls && ticket.screenshotUrls.length > 0 && (
             <div className="flex items-start gap-4">
-              <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">
-                Attachments
-              </span>
+              <span className="font-dm-sans font-medium text-base text-[#171417] min-w-[160px]">Attachments</span>
               <div className="flex flex-col gap-4">
                 {ticket.screenshotUrls.map((url, idx) => (
                   <div key={idx} className="flex items-center gap-4">
@@ -266,42 +230,24 @@ const TicketDetailView = ({ ticket, onClose }: TicketDetailViewProps) => {
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[#8C8989] hover:text-[#154751] font-normal text-[.875rem] flex items-center gap-2 transition-colors"
+                          className="text-[#8C8989] hover:text-[#154751] text-[.875rem] flex items-center gap-2"
                         >
-                          <span>View file</span>
+                          View file
                         </a>
                       </div>
                       <button
                         onClick={() => handleDownload(url)}
                         disabled={downloadingFile === url}
-                        className="text-[#373737] hover:text-[#154751] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={downloadingFile === url ? "Downloading..." : "Download file"}
+                        className="text-[#373737] hover:text-[#154751] disabled:opacity-50"
+                        title={downloadingFile === url ? "Downloading..." : "Download"}
                       >
                         {downloadingFile === url ? (
                           <div className="w-5 h-5 border-2 border-[#154751] border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path
-                              d="M17.5 12.5V15.8333C17.5 16.2754 17.3244 16.6993 17.0118 17.0118C16.6993 17.3244 16.2754 17.5 15.8333 17.5H4.16667C3.72464 17.5 3.30072 17.3244 2.98816 17.0118C2.67559 16.6993 2.5 16.2754 2.5 15.8333V12.5"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <path
-                              d="M5.83331 8.33333L9.99998 12.5L14.1666 8.33333"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <path
-                              d="M10 12.5V2.5"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
+                            <path d="M17.5 12.5V15.8333C17.5 16.2754 17.3244 16.6993 17.0118 17.0118C16.6993 17.3244 16.2754 17.5 15.8333 17.5H4.16667C3.72464 17.5 3.30072 17.3244 2.98816 17.0118C2.67559 16.6993 2.5 16.2754 2.5 15.8333V12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M5.83331 8.33333L9.99998 12.5L14.1666 8.33333" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M10 12.5V2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         )}
                       </button>
@@ -315,38 +261,30 @@ const TicketDetailView = ({ ticket, onClose }: TicketDetailViewProps) => {
 
         {/* User Message */}
         <div className="space-y-2">
-          <h3 className="font-dm-sans font-medium text-base text-[#171417]">
-            User Message
-          </h3>
+          <h3 className="font-dm-sans font-medium text-base text-[#171417]">User Message</h3>
           <div className="bg-[#E8FBF7] rounded-xl px-4 py-3">
-            <p className="font-dm-sans text-base leading-[140%] text-[#171417]">
-              {ticket.description}
-            </p>
+            <p className="font-dm-sans text-base leading-[140%] text-[#171417]">{ticket.description}</p>
           </div>
         </div>
 
         {/* Admin Response */}
         {hasAdminResponse && (
           <div className="space-y-2">
-            <h3 className="font-dm-sans font-medium text-base text-[#171417]">
-              Admin Response
-            </h3>
+            <h3 className="font-dm-sans font-medium text-base text-[#171417]">Admin Response</h3>
             <div className="bg-[#FFFAFA] rounded-xl px-4 py-3">
-              <p className="font-dm-sans text-base leading-[140%] text-[#171417]">
-                {ticket.adminResponse}
-              </p>
+              <p className="font-dm-sans text-base leading-[140%] text-[#171417]">{ticket.adminResponse}</p>
             </div>
           </div>
         )}
 
-        {/* Error Display */}
+        {/* Error Message */}
         {respondError && (
           <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
             <p className="font-dm-sans text-sm text-red-600">{respondError}</p>
           </div>
         )}
 
-        {/* Response Section */}
+        {/* Response Input */}
         {ticket.status !== "RESOLVED" && (
           <div className="space-y-4">
             <div className="space-y-2">
@@ -366,21 +304,10 @@ const TicketDetailView = ({ ticket, onClose }: TicketDetailViewProps) => {
 
             <div className="flex items-center gap-2 text-[#454345]">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path
-                  d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z"
-                  stroke="#454345"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M10 6V10L13 13"
-                  stroke="#454345"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
+                <path d="M10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18Z" stroke="#454345" strokeWidth="2" />
+                <path d="M10 6V10L13 13" stroke="#454345" strokeWidth="2" strokeLinecap="round" />
               </svg>
-              <p className="font-dm-sans text-base">
-                Response will be sent via email to {ticket.email}
-              </p>
+              <p className="font-dm-sans text-base">Response will be sent via email to {ticket.email}</p>
             </div>
 
             <div className="flex flex-col md:flex-row gap-4">
@@ -407,12 +334,10 @@ const TicketDetailView = ({ ticket, onClose }: TicketDetailViewProps) => {
           </div>
         )}
 
-        {/* Resolved Status */}
+        {/* Resolved State */}
         {ticket.status === "RESOLVED" && (
           <div className="bg-[#E0F5E6] border border-[#1FC16B] rounded-lg px-4 py-3 text-center">
-            <p className="font-dm-sans font-medium text-base text-[#1FC16B]">
-              This ticket has been resolved
-            </p>
+            <p className="font-dm-sans font-medium text-base text-[#1FC16B]">This ticket has been resolved</p>
           </div>
         )}
       </div>
@@ -421,43 +346,31 @@ const TicketDetailView = ({ ticket, onClose }: TicketDetailViewProps) => {
 
   return (
     <>
-      {/* DESKTOP */}
+      {/* Desktop */}
       <div className="hidden md:fixed md:inset-0 md:z-[200] md:flex md:items-center md:justify-center md:p-4">
-        <div
-          className="absolute inset-0"
-          onClick={onClose}
-          style={{ background: "rgba(0,0,0,0.05)" }}
-        />
+        <div className="absolute inset-0 bg-black/5" onClick={onClose} />
         <div className="relative bg-white rounded-2xl shadow-lg w-full max-w-[671px] max-h-[90vh] overflow-y-auto">
-          <ModalContent />
+          {modalContent}
         </div>
       </div>
 
-      {/* MOBILE */}
+      {/* Mobile */}
       <div className="md:hidden fixed inset-0 z-[200] flex items-end">
+        <div className="absolute inset-0 bg-black/5" onClick={onClose} />
         <div
-          className="absolute inset-0"
-          onClick={onClose}
-          style={{ background: "rgba(0,0,0,0.05)" }}
-        />
-        <div
-          className="relative w-full bg-white rounded-t-2xl shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up"
+          className="relative w-full bg-white rounded-t-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          <ModalContent />
+          {modalContent}
         </div>
       </div>
 
       <style jsx>{`
         @keyframes slide-up {
-          from {
-            transform: translateY(100%);
-          }
-          to {
-            transform: translateY(0);
-          }
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
         }
-        .animate-slide-up {
+        .md\\:hidden ~ div > div {
           animation: slide-up 0.35s ease-out;
         }
       `}</style>

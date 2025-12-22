@@ -62,6 +62,7 @@ interface SupportTicketState {
   setFilters: (filters: SupportTicketFilters) => void;
   clearFilters: () => void;
   clearSelectedTicket: () => void;
+  clearRespondError: () => void;
 }
 
 export const supportTicketStore = create<SupportTicketState>((set, get) => ({
@@ -86,8 +87,6 @@ export const supportTicketStore = create<SupportTicketState>((set, get) => ({
     set({ ticketsLoading: true, ticketsError: null });
 
     try {
-      console.log("📋 fetchTickets called with:", { page, limit, status });
-      
       const response: unknown = await supportService.getAllTickets({
         page,
         limit,
@@ -99,13 +98,6 @@ export const supportTicketStore = create<SupportTicketState>((set, get) => ({
       }
 
       const typedResponse = response as SupportTicketsApiResponse;
-
-      console.log("✅ Fetched tickets:", { 
-        total: typedResponse.total, 
-        page: typedResponse.page,
-        statusFilter: status,
-        count: typedResponse.data.length
-      });
 
       set({
         tickets: typedResponse.data,
@@ -155,20 +147,21 @@ export const supportTicketStore = create<SupportTicketState>((set, get) => ({
 
   setSelectedTicket: (ticket) => set({ selectedTicket: ticket }),
 
+  clearRespondError: () => set({ respondError: null }),
+
   respondToTicket: async (ticketId: string, adminResponse: string) => {
     set({ respondingToTicket: true, respondError: null });
 
     try {
-      // Find the ticket to get its ticketId (TICKET-...)
       const { tickets } = get();
       const ticket = tickets.find(t => t.id === ticketId);
       
       if (!ticket) {
-        throw new Error("Ticket not found in store");
+        throw new Error("Ticket not found in local list");
       }
 
       const response: unknown = await supportService.respondToTicket({
-        ticketId: ticket.ticketId, // Use the TICKET-... format
+        ticketId: ticket.ticketId,
         adminResponse,
       });
 
@@ -178,7 +171,7 @@ export const supportTicketStore = create<SupportTicketState>((set, get) => ({
 
       const updatedTicket = response as SupportTicketResponse;
 
-      // Update the ticket in the list
+      // Update both list and selected ticket
       set((state) => ({
         tickets: state.tickets.map((t) =>
           t.id === updatedTicket.id ? updatedTicket : t
@@ -189,11 +182,14 @@ export const supportTicketStore = create<SupportTicketState>((set, get) => ({
         respondError: null,
       }));
 
+      // Optional: Refetch full list to ensure sync (uncomment if needed)
+      // await get().fetchTickets(get().currentPage, get().limit);
+
       return true;
     } catch (err: any) {
       console.error("Failed to respond to ticket:", err);
       set({
-        respondError: err.message || "Failed to send response",
+        respondError: err.message || "Failed to send response. Please try again.",
       });
       return false;
     } finally {
@@ -205,17 +201,13 @@ export const supportTicketStore = create<SupportTicketState>((set, get) => ({
     set({ respondingToTicket: true, respondError: null });
 
     try {
-      // Find the ticket to get its ticketId (TICKET-...)
       const { tickets } = get();
       const ticket = tickets.find(t => t.id === ticketId);
       
       if (!ticket) {
-        console.error("Ticket not found. Looking for ID:", ticketId);
-        console.error("Available tickets:", tickets.map(t => ({ id: t.id, ticketId: t.ticketId })));
-        throw new Error("Ticket not found in store");
+        throw new Error("Ticket not found in local list");
       }
 
-      console.log("Marking as resolved - using ticketId:", ticket.ticketId);
       const response: unknown = await supportService.markAsResolved(ticket.ticketId);
 
       if (isHttpError(response)) {
@@ -224,7 +216,6 @@ export const supportTicketStore = create<SupportTicketState>((set, get) => ({
 
       const updatedTicket = response as SupportTicketResponse;
 
-      // Update the ticket in the list
       set((state) => ({
         tickets: state.tickets.map((t) =>
           t.id === updatedTicket.id ? updatedTicket : t
@@ -239,7 +230,7 @@ export const supportTicketStore = create<SupportTicketState>((set, get) => ({
     } catch (err: any) {
       console.error("Failed to mark ticket as resolved:", err);
       set({
-        respondError: err.message || "Failed to mark as resolved",
+        respondError: err.message || "Failed to mark as resolved. Please try again.",
       });
       return false;
     } finally {
@@ -251,12 +242,11 @@ export const supportTicketStore = create<SupportTicketState>((set, get) => ({
     set({ respondingToTicket: true, respondError: null });
 
     try {
-      // Find the ticket to get its ticketId (TICKET-...)
       const { tickets } = get();
       const ticket = tickets.find(t => t.id === ticketId);
       
       if (!ticket) {
-        throw new Error("Ticket not found in store");
+        throw new Error("Ticket not found in local list");
       }
 
       const response: unknown = await supportService.updateTicketStatus(ticket.ticketId, status);
@@ -267,7 +257,6 @@ export const supportTicketStore = create<SupportTicketState>((set, get) => ({
 
       const updatedTicket = response as SupportTicketResponse;
 
-      // Update the ticket in the list
       set((state) => ({
         tickets: state.tickets.map((t) =>
           t.id === updatedTicket.id ? updatedTicket : t
@@ -290,45 +279,32 @@ export const supportTicketStore = create<SupportTicketState>((set, get) => ({
     }
   },
 
-  setFilters: (filters) => set({ filters }),
-  clearFilters: () => set({ filters: {} }),
-  clearSelectedTicket: () => set({ 
-    selectedTicket: null, 
-    selectedTicketError: null 
-  }),
-
   deleteTicket: async (ticketId: string) => {
-    console.log("🗑️ deleteTicket called with:", ticketId);
     set({ respondingToTicket: true, respondError: null });
 
     try {
-      // Find the ticket to get its ticketId (TICKET-...)
       const { tickets } = get();
       const ticket = tickets.find(t => t.id === ticketId);
       
       if (!ticket) {
-        console.error("❌ Ticket not found in store. Looking for ID:", ticketId);
-        console.error("Available tickets:", tickets.map(t => ({ id: t.id, ticketId: t.ticketId })));
-        throw new Error("Ticket not found in store");
+        throw new Error("Ticket not found in local list");
       }
 
-      console.log("📞 Calling supportService.deleteTicket with:", ticket.ticketId);
       const deleteResult = await supportService.deleteTicket(ticket.ticketId);
-      console.log("📞 deleteTicket API response:", deleteResult);
 
-      // Remove the ticket from the list
+      if (isHttpError(deleteResult)) {
+        throw new Error(deleteResult.message);
+      }
+
       set((state) => ({
         tickets: state.tickets.filter((t) => t.id !== ticketId),
         selectedTicket: state.selectedTicket?.id === ticketId ? null : state.selectedTicket,
         respondError: null,
       }));
 
-      console.log("✅ deleteTicket succeeded - ticket removed from store");
       return true;
     } catch (err: any) {
-      console.error("❌ Failed to delete ticket:", err);
-      console.error("Error message:", err.message);
-      console.error("Error stack:", err.stack);
+      console.error("Failed to delete ticket:", err);
       set({
         respondError: err.message || "Failed to delete ticket",
       });
@@ -337,4 +313,11 @@ export const supportTicketStore = create<SupportTicketState>((set, get) => ({
       set({ respondingToTicket: false });
     }
   },
+
+  setFilters: (filters) => set({ filters }),
+  clearFilters: () => set({ filters: {} }),
+  clearSelectedTicket: () => set({ 
+    selectedTicket: null, 
+    selectedTicketError: null 
+  }),
 }));
