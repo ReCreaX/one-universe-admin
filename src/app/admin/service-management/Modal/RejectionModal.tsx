@@ -1,6 +1,7 @@
 // components/Modal/RejectionModal.tsx
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import { X, AlertCircle } from "lucide-react";
+import { BulkOperationError } from "@/services/serviceManagement";
 
 interface RejectionModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface RejectionModalProps {
   providerName: string;
   isBulk?: boolean;
   bulkCount?: number;
+  onError?: (error: string, details?: string) => void;
 }
 
 export default function RejectionModal({
@@ -20,24 +22,52 @@ export default function RejectionModal({
   providerName,
   isBulk = false,
   bulkCount = 0,
+  onError,
 }: RejectionModalProps) {
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const handleConfirm = async () => {
     setIsSubmitting(true);
+    setErrorMessage(null);
     try {
       await onConfirm(reason.trim());
-    } finally {
-      setIsSubmitting(false);
+      // Only close and reset if successful
       setReason("");
+      setIsSubmitting(false);
+    } catch (error) {
+      // Always handle errors here, don't re-throw
+      let displayError = "An error occurred. Please try again.";
+      let errorDetails = "";
+
+      if (error instanceof BulkOperationError) {
+        // Handle bulk operation partial failure
+        const { result } = error;
+        displayError = error.message;
+        errorDetails = `${result.summary.successCount}/${result.summary.total} services rejected. Failures: ${result.failed.map(f => `${f.id}: ${f.error}`).join("; ")}`;
+      } else if (error instanceof Error) {
+        // Handle regular errors - show the actual backend error
+        displayError = error.message;
+      }
+
+      setErrorMessage(displayError);
+      setIsSubmitting(false);
+      
+      if (onError) {
+        onError(displayError, errorDetails);
+      }
+
+      // console.error("❌ Error during rejection:", error);
+      // Don't re-throw - stay in the modal so user can see the error
     }
   };
 
   const handleClose = () => {
     setReason("");
+    setErrorMessage(null);
     onClose();
   };
 
@@ -78,6 +108,18 @@ export default function RejectionModal({
                 </p>
               </div>
             </div>
+
+            {/* Error Message Display */}
+            {errorMessage && (
+              <div className="bg-[#FEE] border border-[#D84040] rounded-lg p-4 flex gap-3">
+                <AlertCircle className="w-5 h-5 text-[#D84040] flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-[#D84040] font-['DM_Sans']">
+                    {errorMessage}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Reason Input */}
             <div className="space-y-2">
@@ -136,6 +178,18 @@ export default function RejectionModal({
                 You can optionally add a reason for this rejection.
               </p>
             </div>
+
+            {/* Error Message Display */}
+            {errorMessage && (
+              <div className="bg-[#FEE] border border-[#D84040] rounded-lg p-4 flex gap-3">
+                <AlertCircle className="w-5 h-5 text-[#D84040] flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-[#D84040] font-['DM_Sans']">
+                    {errorMessage}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Reason Input */}
             <div className="space-y-2">

@@ -35,6 +35,31 @@ interface ServicesByStatusResponse {
   rejected: { data: Service[]; meta: { total: number } };
 }
 
+// Bulk operation result type
+export interface BulkOperationResult {
+  successful: string[];
+  failed: Array<{
+    id: string;
+    error: string;
+  }>;
+  summary: {
+    total: number;
+    successCount: number;
+    failureCount: number;
+  };
+}
+
+// Custom error for bulk operations
+export class BulkOperationError extends Error {
+  constructor(
+    public result: BulkOperationResult,
+    message: string
+  ) {
+    super(message);
+    this.name = "BulkOperationError";
+  }
+}
+
 class ServiceManagementService {
   /**
    * Generic request method with NextAuth session
@@ -46,7 +71,7 @@ class ServiceManagementService {
     const session = await getSession();
 
     if (!session?.accessToken) {
-      console.error("❌ No access token found in session");
+      // console.error("❌ No access token found in session");
       throw new Error("Unauthorized - Please log in again");
     }
 
@@ -62,12 +87,12 @@ class ServiceManagementService {
 
       // Handle 401 - Token may have expired
       if (response.status === 401) {
-        console.error("❌ Unauthorized: Token expired or invalid");
+        // console.error("❌ Unauthorized: Token expired or invalid");
         throw new Error("Unauthorized - Session expired");
       }
 
       if (response.status === 403) {
-        console.error("❌ Forbidden: Access denied");
+        // console.error("❌ Forbidden: Access denied");
         throw new Error("Forbidden - Access denied");
       }
 
@@ -79,7 +104,7 @@ class ServiceManagementService {
 
       return data;
     } catch (error) {
-      console.error(`❌ Request failed for ${endpoint}:`, error);
+      // console.error(`❌ Request failed for ${endpoint}:`, error);
       throw error;
     }
   }
@@ -111,12 +136,12 @@ class ServiceManagementService {
 
     // Single service - use individual endpoint
     if (ids.length === 1) {
-      console.log(`✅ Approving single service: ${ids[0]}`);
+      // console.log(`✅ Approving single service: ${ids[0]}`);
       await this.approveSingleService(ids[0]);
     } else {
-      // Multiple services - use bulk endpoint
-      console.log(`✅ Approving ${ids.length} services via bulk endpoint`);
-      await this.bulkApproveServices(ids);
+      // Multiple services - use bulk endpoint with fallback to individual processing
+      // console.log(`✅ Approving ${ids.length} services via bulk endpoint`);
+      await this.bulkApproveServicesWithFallback(ids);
     }
   }
 
@@ -130,12 +155,12 @@ class ServiceManagementService {
 
     // Single service - use individual endpoint
     if (ids.length === 1) {
-      console.log(`✅ Rejecting single service: ${ids[0]}`);
+      // console.log(`✅ Rejecting single service: ${ids[0]}`);
       await this.rejectSingleService(ids[0], reason);
     } else {
-      // Multiple services - use bulk endpoint
-      console.log(`✅ Rejecting ${ids.length} services via bulk endpoint`);
-      await this.bulkRejectServices(ids, reason);
+      // Multiple services - use bulk endpoint with fallback to individual processing
+      // console.log(`✅ Rejecting ${ids.length} services via bulk endpoint`);
+      await this.bulkRejectServicesWithFallback(ids, reason);
     }
   }
 
@@ -158,6 +183,129 @@ class ServiceManagementService {
       method: "PATCH",
       body: JSON.stringify({ reason }),
     });
+  }
+
+  /**
+   * Bulk approve with fallback - tries bulk first, then individual services if bulk fails
+   */
+  private async bulkApproveServicesWithFallback(ids: string[]): Promise<void> {
+    try {
+      // Try bulk endpoint first
+      await this.bulkApproveServices(ids);
+      // console.log(`✅ Bulk approved ${ids.length} services successfully`);
+    } catch (error) {
+      // console.warn(`⚠️ Bulk approval failed, attempting individual approvals...`);
+      
+      // Fallback to individual approvals
+      const result = await this.processIndividualApprovals(ids);
+      
+      // If all failed, throw original error
+      if (result.summary.failureCount === ids.length) {
+        throw error;
+      }
+      
+      // If some succeeded, throw BulkOperationError with details
+      if (result.summary.failureCount > 0) {
+        throw new BulkOperationError(
+          result,
+          `Partial success: ${result.summary.successCount} approved, ${result.summary.failureCount} failed. ${result.failed.map(f => `${f.id}: ${f.error}`).join("; ")}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Bulk reject with fallback - tries bulk first, then individual services if bulk fails
+   */
+  private async bulkRejectServicesWithFallback(ids: string[], reason?: string): Promise<void> {
+    try {
+      // Try bulk endpoint first
+      await this.bulkRejectServices(ids, reason);
+      // console.log(`✅ Bulk rejected ${ids.length} services successfully`);
+    } catch (error) {
+      // console.warn(`⚠️ Bulk rejection failed, attempting individual rejections...`);
+      
+      // Fallback to individual rejections
+      const result = await this.processIndividualRejections(ids, reason);
+      
+      // If all failed, throw original error
+      if (result.summary.failureCount === ids.length) {
+        throw error;
+      }
+      
+      // If some succeeded, throw BulkOperationError with details
+      if (result.summary.failureCount > 0) {
+        throw new BulkOperationError(
+          result,
+          `Partial success: ${result.summary.successCount} rejected, ${result.summary.failureCount} failed. ${result.failed.map(f => `${f.id}: ${f.error}`).join("; ")}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Process individual approvals with detailed error tracking
+   */
+  private async processIndividualApprovals(ids: string[]): Promise<BulkOperationResult> {
+    const result: BulkOperationResult = {
+      successful: [],
+      failed: [],
+      summary: {
+        total: ids.length,
+        successCount: 0,
+        failureCount: 0,
+      },
+    };
+
+    for (const id of ids) {
+      try {
+        await this.approveSingleService(id);
+        result.successful.push(id);
+        result.summary.successCount++;
+        // console.log(`✅ Approved service: ${id}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        result.failed.push({ id, error: errorMessage });
+        result.summary.failureCount++;
+        // console.error(`❌ Failed to approve service ${id}: ${errorMessage}`);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Process individual rejections with detailed error tracking
+   */
+  private async processIndividualRejections(
+    ids: string[],
+    reason?: string
+  ): Promise<BulkOperationResult> {
+    const result: BulkOperationResult = {
+      successful: [],
+      failed: [],
+      summary: {
+        total: ids.length,
+        successCount: 0,
+        failureCount: 0,
+      },
+    };
+
+    for (const id of ids) {
+      try {
+        await this.rejectSingleService(id, reason);
+        result.successful.push(id);
+        result.summary.successCount++;
+        // console.log(`✅ Rejected service: ${id}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        result.failed.push({ id, error: errorMessage });
+        result.summary.failureCount++;
+        // console.error(`❌ Failed to reject service ${id}: ${errorMessage}`);
+      }
+    }
+
+    return result;
   }
 
   /**

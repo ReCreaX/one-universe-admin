@@ -145,38 +145,32 @@ export default function ServiceManagementPage() {
   };
 
   // Handle approval confirm from modal
+  // NOTE: Error handling is done in the ApprovalModal component
+  // This function should NOT have try-catch, so errors bubble up to the modal
   const handleApprovalConfirm = async (): Promise<void> => {
     if (approvalModalState.serviceIds.length === 0) return;
 
-    setLoading(true);
-    try {
-      if (approvalModalState.serviceIds.length === 1) {
-        // Single approve
-        await approveService(approvalModalState.serviceIds[0]);
-        showToast("success", "Service approved successfully");
-      } else {
-        // Bulk approve
-        await bulkApprove(approvalModalState.serviceIds);
-        showToast("success", `${approvalModalState.serviceIds.length} services approved successfully`);
-      }
-
-      // Re-fetch to ensure consistency
-      await fetchServices();
-      clearSelection();
-
-      // Close modal
-      setApprovalModalState({
-        isOpen: false,
-        serviceIds: [],
-        serviceName: "",
-        providerName: "",
-      });
-    } catch (err) {
-      console.error("Approval failed:", err);
-      showToast("error", "Failed to approve service(s)");
-    } finally {
-      setLoading(false);
+    if (approvalModalState.serviceIds.length === 1) {
+      // Single approve
+      await approveService(approvalModalState.serviceIds[0]);
+      showToast("success", "Service approved successfully");
+    } else {
+      // Bulk approve
+      await bulkApprove(approvalModalState.serviceIds);
+      showToast("success", `${approvalModalState.serviceIds.length} services approved successfully`);
     }
+
+    // Re-fetch to ensure consistency
+    await fetchServices();
+    clearSelection();
+
+    // Close modal
+    setApprovalModalState({
+      isOpen: false,
+      serviceIds: [],
+      serviceName: "",
+      providerName: "",
+    });
   };
 
   // Close approval modal
@@ -209,38 +203,32 @@ export default function ServiceManagementPage() {
   };
 
   // Handle reject confirm from modal
+  // NOTE: Error handling is done in the RejectionModal component
+  // This function should NOT have try-catch, so errors bubble up to the modal
   const handleRejectConfirm = async (reason: string): Promise<void> => {
     if (rejectModalState.serviceIds.length === 0) return;
 
-    setLoading(true);
-    try {
-      if (rejectModalState.serviceIds.length === 1) {
-        // Single reject
-        await rejectService(rejectModalState.serviceIds[0], reason);
-        showToast("success", "Service rejected successfully");
-      } else {
-        // Bulk reject
-        await bulkReject(rejectModalState.serviceIds, reason);
-        showToast("success", `${rejectModalState.serviceIds.length} services rejected successfully`);
-      }
-
-      // Re-fetch to ensure consistency
-      await fetchServices();
-      clearSelection();
-
-      // Close modal
-      setRejectModalState({
-        isOpen: false,
-        serviceIds: [],
-        serviceName: "",
-        providerName: "",
-      });
-    } catch (err) {
-      console.error("Rejection failed:", err);
-      showToast("error", "Failed to reject service(s)");
-    } finally {
-      setLoading(false);
+    if (rejectModalState.serviceIds.length === 1) {
+      // Single reject
+      await rejectService(rejectModalState.serviceIds[0], reason);
+      showToast("success", "Service rejected successfully");
+    } else {
+      // Bulk reject
+      await bulkReject(rejectModalState.serviceIds, reason);
+      showToast("success", `${rejectModalState.serviceIds.length} services rejected successfully`);
     }
+
+    // Re-fetch to ensure consistency
+    await fetchServices();
+    clearSelection();
+
+    // Close modal
+    setRejectModalState({
+      isOpen: false,
+      serviceIds: [],
+      serviceName: "",
+      providerName: "",
+    });
   };
 
   // Close reject modal
@@ -527,7 +515,6 @@ export default function ServiceManagementPage() {
         providerName={approvalModalState.providerName}
         isBulk={approvalModalState.serviceIds.length > 1}
         bulkCount={approvalModalState.serviceIds.length}
-        isLoading={loading}
       />
     </main>
   );

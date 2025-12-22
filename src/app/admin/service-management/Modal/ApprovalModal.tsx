@@ -1,6 +1,7 @@
 // components/Modal/ApprovalModal.tsx
-import React from "react";
+import React, { useState } from "react";
 import { Check, AlertCircle } from "lucide-react";
+import { BulkOperationError } from "@/services/serviceManagement";
 
 interface ApprovalModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface ApprovalModalProps {
   isBulk?: boolean;
   bulkCount?: number;
   isLoading?: boolean;
+  onError?: (error: string) => void;
 }
 
 export default function ApprovalModal({
@@ -22,13 +24,45 @@ export default function ApprovalModal({
   isBulk = false,
   bulkCount = 0,
   isLoading = false,
+  onError,
 }: ApprovalModalProps) {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLocalLoading, setIsLocalLoading] = useState(false);
+
   if (!isOpen) return null;
 
-  const handleConfirm = () => {
-    onConfirm();
+  const handleConfirm = async () => {
+    setIsLocalLoading(true);
+    setErrorMessage(null);
+    try {
+      await onConfirm();
+      // Only close and reset if successful
+      setIsLocalLoading(false);
+    } catch (error) {
+      // Always handle errors here, don't re-throw
+      let displayError = "An error occurred. Please try again.";
+
+      if (error instanceof BulkOperationError) {
+        // Handle bulk operation partial failure
+        displayError = error.message;
+      } else if (error instanceof Error) {
+        // Handle regular errors - show the actual backend error
+        displayError = error.message;
+      }
+
+      setErrorMessage(displayError);
+      setIsLocalLoading(false);
+      
+      if (onError) {
+        onError(displayError);
+      }
+
+      // console.error("❌ Error during approval:", error);
+      // Don't re-throw - stay in the modal so user can see the error
+    }
   };
 
+  const isProcessing = isLoading || isLocalLoading;
   const buttonText = isBulk ? `Approve All (${bulkCount})` : "Approve Service";
   const title = isBulk ? "Approve Multiple Services" : "Approve Service Suggestion";
   const description = isBulk
@@ -72,24 +106,36 @@ export default function ApprovalModal({
               </div>
             </div>
 
+            {/* Error Message Display */}
+            {errorMessage && (
+              <div className="bg-[#FEE] border border-[#D84040] rounded-lg p-4 flex gap-3">
+                <AlertCircle className="w-5 h-5 text-[#D84040] flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-[#D84040] font-['DM_Sans']">
+                    {errorMessage}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Buttons */}
             <div className="flex gap-8">
               <button
                 onClick={onClose}
-                disabled={isLoading}
+                disabled={isProcessing}
                 className="flex-1 h-12 rounded-[20px] border border-[#154751] bg-white text-[#154751] font-medium font-['DM_Sans'] text-base leading-[140%] hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirm}
-                disabled={isLoading}
+                disabled={isProcessing}
                 className="flex-1 h-12 rounded-[20px] bg-gradient-to-r from-[#154751] to-[#04171F] text-white font-medium font-['DM_Sans'] text-base leading-[140%] hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: "radial-gradient(50% 50% at 50% 50%, #154751 37%, #04171F 100%)",
                 }}
               >
-                {isLoading ? "Approving..." : buttonText}
+                {isProcessing ? "Approving..." : buttonText}
               </button>
             </div>
           </div>
@@ -123,21 +169,33 @@ export default function ApprovalModal({
               </div>
             </div>
 
+            {/* Error Message Display */}
+            {errorMessage && (
+              <div className="bg-[#FEE] border border-[#D84040] rounded-lg p-4 flex gap-3">
+                <AlertCircle className="w-5 h-5 text-[#D84040] flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-[#D84040] font-['DM_Sans']">
+                    {errorMessage}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Buttons - Stacked, Approve first */}
             <div className="flex flex-col gap-4">
               <button
                 onClick={handleConfirm}
-                disabled={isLoading}
+                disabled={isProcessing}
                 className="w-full h-12 rounded-[20px] bg-gradient-to-r from-[#154751] to-[#04171F] text-white font-medium font-['DM_Sans'] text-base leading-[140%] hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: "radial-gradient(50% 50% at 50% 50%, #154751 37%, #04171F 100%)",
                 }}
               >
-                {isLoading ? "Approving..." : buttonText}
+                {isProcessing ? "Approving..." : buttonText}
               </button>
               <button
                 onClick={onClose}
-                disabled={isLoading}
+                disabled={isProcessing}
                 className="w-full h-12 rounded-[20px] border border-[#154751] bg-white text-[#154751] font-medium font-['DM_Sans'] text-base leading-[140%] hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
