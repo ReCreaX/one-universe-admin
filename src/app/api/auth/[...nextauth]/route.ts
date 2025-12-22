@@ -4,11 +4,9 @@ import getBaseUrl from "@/services/baseUrl";
 
 const baseUrl = getBaseUrl("live");
 
-// --- Refresh token helper ---
 async function refreshAccessToken(token: any): Promise<any> {
   try {
     if (!token.refreshToken) {
-      console.error("❌ No refresh token available in token object");
       throw new Error("No refresh token");
     }
 
@@ -22,18 +20,10 @@ async function refreshAccessToken(token: any): Promise<any> {
       },
     });
 
-    let data;
-    try {
-      data = await res.json();
-    } catch (parseError) {
-      console.error("❌ Failed to parse refresh response:", parseError);
-      throw new Error("Invalid response from refresh endpoint");
-    }
+    const data = await res.json();
 
     if (!res.ok) {
-      console.error("❌ Refresh failed with status:", res.status);
-      console.error("❌ Response data:", data);
-      throw new Error(data.message || `Refresh failed with status ${res.status}`);
+      throw new Error(data.message || "Refresh failed");
     }
 
     console.log("✅ Token refreshed successfully");
@@ -42,7 +32,7 @@ async function refreshAccessToken(token: any): Promise<any> {
       ...token,
       accessToken: data.accessToken,
       refreshToken: data.refreshToken || token.refreshToken,
-      accessTokenExpires: Date.now() + 5 * 60 * 1000,
+      accessTokenExpires: Date.now() + 15 * 60 * 1000,
       error: undefined,
     };
   } catch (error: any) {
@@ -79,24 +69,41 @@ export const authOptions: NextAuthOptions = {
             }),
           });
 
-          let data = null;
-          try {
-            data = await res.json();
-          } catch {
-            return null;
-          }
+          const data = await res.json();
 
           if (!res.ok || !data.user?.id || !data.accessToken || !data.refreshToken) {
             return null;
           }
 
-          // ✅ DO NOT include image/base64 in returned user
+          let permissions: Array<{module: string, action: string}> = [];
+          let roles: string[] = [];
+
+          try {
+            const base64Url = data.accessToken.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(
+              atob(base64)
+                .split('')
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+            );
+            const payload = JSON.parse(jsonPayload);
+
+            permissions = payload.permissions || [];
+            roles = payload.roles || [];
+          } catch (err) {
+            console.error("❌ Failed to decode JWT:", err);
+            roles = data.user.roles || [];
+          }
+
           return {
             id: data.user.id.toString(),
             email: data.user.email,
             name: data.user.fullName,
             accessToken: data.accessToken,
             refreshToken: data.refreshToken,
+            permissions,
+            roles,
           };
         } catch (err) {
           console.error("❌ Authorization error:", err);
@@ -108,43 +115,47 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user }) {
-      // Initial sign-in
       if (user) {
-        const userWithTokens = user as any;
+        const u = user as any;
         return {
           ...token,
           id: user.id,
           email: user.email,
           name: user.name,
-          accessToken: userWithTokens.accessToken,
-          refreshToken: userWithTokens.refreshToken,
+          accessToken: u.accessToken,
+          refreshToken: u.refreshToken,
+          permissions: u.permissions || [],
+          roles: u.roles || [],
           accessTokenExpires: Date.now() + 15 * 60 * 1000,
         };
       }
 
-      // Missing tokens
-      if (!token.accessToken || !token.refreshToken) {
-        return { ...token, error: "MissingTokens" };
-      }
-
-      // Still valid
-      if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
+      if (!token.accessToken || !token.accessTokenExpires || Date.now() < (token.accessTokenExpires as number)) {
         return token;
       }
 
-      // Refresh
       return refreshAccessToken(token);
     },
 
     async session({ session, token }) {
+      console.log("📋 Session Callback - Building session");
+      console.log("   Token permissions count:", (token as any).permissions?.length || 0);
+
       session.user = session.user || {};
       session.user.id = token.id as string;
       session.user.email = token.email as string;
       session.user.name = token.name as string;
-      // ✅ No image passed to session
-      session.accessToken = token.accessToken as string;
-      session.refreshToken = token.refreshToken as string;
-      session.error = token.error;
+
+      // ✅ CRITICAL: Expose permissions & roles to client via session.user
+      (session.user as any).permissions = (token as any).permissions || [];
+      (session.user as any).roles = (token as any).roles || [];
+
+      // Keep top-level for server-side use if needed
+      (session as any).accessToken = token.accessToken;
+      (session as any).permissions = (token as any).permissions || [];
+      (session as any).roles = (token as any).roles || [];
+
+      console.log("✅ Session built with user.permissions count:", (session.user as any).permissions.length);
 
       return session;
     },
