@@ -6,7 +6,11 @@ import Image from "next/image";
 import { useNotificationsStore } from "@/store/Notificationsstore";
 import { notificationsService } from "@/services/Notificationsservice";
 
-const NotificationsPanel = () => {
+interface NotificationsPanelProps {
+  onClose?: () => void; // Optional close handler
+}
+
+const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ onClose }) => {
   const {
     notifications,
     unreadCount,
@@ -27,45 +31,21 @@ const NotificationsPanel = () => {
   const getStatusStyles = (type: string) => {
     switch (type) {
       case "DISPUTE_NOTIFICATION":
-        return {
-          badge: "bg-[#FFF2B9]",
-          badgeText: "text-[#9D7F04]",
-          label: "Dispute",
-        };
+        return { badge: "bg-[#FFF2B9]", badgeText: "text-[#9D7F04]", label: "Dispute" };
       case "PAYMENT_NOTIFICATION":
-        return {
-          badge: "bg-[#D3E1FF]",
-          badgeText: "text-[#007BFF]",
-          label: "Payment",
-        };
+        return { badge: "bg-[#D3E1FF]", badgeText: "text-[#007BFF]", label: "Payment" };
       case "SYSTEM_NOTIFICATION":
-        return {
-          badge: "bg-[#E5E5E5]",
-          badgeText: "text-[#242424]",
-          label: "System",
-        };
+        return { badge: "bg-[#E5E5E5]", badgeText: "text-[#242424]", label: "System" };
       case "SUCCESS_NOTIFICATION":
-        return {
-          badge: "bg-[#D3F5E3]",
-          badgeText: "text-[#1FC16B]",
-          label: "Success",
-        };
+        return { badge: "bg-[#D3F5E3]", badgeText: "text-[#1FC16B]", label: "Success" };
       default:
-        return {
-          badge: "bg-[#E5E5E5]",
-          badgeText: "text-[#242424]",
-          label: "Info",
-        };
+        return { badge: "bg-[#E5E5E5]", badgeText: "text-[#242424]", label: "Info" };
     }
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", { 
-      month: "short", 
-      day: "numeric", 
-      year: "numeric" 
-    });
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   };
 
   const EmptyState = () => (
@@ -110,28 +90,23 @@ const NotificationsPanel = () => {
 
     const handleViewDetails = (e: React.MouseEvent) => {
       e.stopPropagation();
-      
-      // Determine navigation based on notification type
+
       if (notification.type === "DISPUTE_NOTIFICATION" && notification.data?.ticketId) {
-        // Navigate to dispute details
         window.location.href = `/admin/dispute-management?disputeId=${notification.data.ticketId}`;
       } else if (notification.type === "PAYMENT_NOTIFICATION" && notification.data?.ticketId) {
-        // Navigate to payment details (assuming ticketId is the payment reference)
         window.location.href = `/admin/payment-management?reference=${notification.data.ticketId}`;
       } else if (notification.data?.ticketId) {
-        // Default fallback for other notification types
         window.location.href = `/tickets/${notification.data.ticketId}`;
       }
     };
 
     return (
       <div
-        className={`p-3 rounded-lg border border-[#E6E7E9] gap-3 flex cursor-pointer hover:bg-opacity-90 transition-colors relative ${
+        className={`p-3 rounded-lg border border-[#E6E7E9] gap-3 flex cursor-pointer hover:bg-gray-50 transition-colors relative ${
           isUnread ? "bg-[#F5F5F5]" : "bg-white"
         } ${isMarking ? "opacity-50" : ""}`}
         onClick={handleClick}
       >
-        {/* Close Button - Positioned absolutely with proper spacing */}
         <button
           onClick={handleDelete}
           className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center text-[#6B6969] hover:text-[#D84040] hover:bg-gray-100 rounded transition-colors z-10"
@@ -140,7 +115,6 @@ const NotificationsPanel = () => {
           <X size={16} />
         </button>
 
-        {/* Notification Icon */}
         <div className="w-8 h-8 rounded-lg border border-[#E6E7E9] flex items-center justify-center flex-shrink-0">
           {notification.sender?.profilePicture ? (
             <div className="relative w-full h-full rounded-lg overflow-hidden">
@@ -152,15 +126,11 @@ const NotificationsPanel = () => {
               />
             </div>
           ) : (
-            <div className="w-5 h-4 flex items-center justify-center">
-              <Bell size={16} className="text-[#154751]" />
-            </div>
+            <Bell size={16} className="text-[#154751]" />
           )}
         </div>
 
-        {/* Content - Added more right padding to avoid overlap with close button */}
         <div className="flex-1 gap-2 flex flex-col pr-10">
-          {/* Title and Time */}
           <div className="flex justify-between items-start gap-2">
             <h4 className="font-dm-sans font-medium text-base text-[#171417] flex-1">
               {notification.title}
@@ -170,50 +140,29 @@ const NotificationsPanel = () => {
             </span>
           </div>
 
-          {/* Message Body */}
           <p className="font-dm-sans text-sm text-[#565C69] line-clamp-2">
             {notification.body}
           </p>
 
-          {/* Sender Info (if available) */}
           {notification.sender && (
             <p className="font-dm-sans text-xs text-[#6B6969]">
               From: {notification.sender.fullName}
             </p>
           )}
 
-          {/* Status and Action */}
           <div className="flex justify-between items-center gap-4 mt-2">
-            {/* Status Badge */}
-            <div
-              className={`px-2 py-1 rounded-lg h-7 flex items-center gap-1.5 ${styles.badge}`}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <circle
-                  cx="8"
-                  cy="8"
-                  r="4"
-                  fill="currentColor"
-                  className={styles.badgeText}
-                />
+            <div className={`px-2 py-1 rounded-lg h-7 flex items-center gap-1.5 ${styles.badge}`}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="8" cy="8" r="4" fill="currentColor" className={styles.badgeText} />
               </svg>
-              <span
-                className={`font-dm-sans text-sm font-normal ${styles.badgeText}`}
-              >
+              <span className={`font-dm-sans text-sm font-normal ${styles.badgeText}`}>
                 {styles.label}
               </span>
             </div>
 
-            {/* View Details Button with Unread Indicator */}
             <div className="flex items-center gap-2">
               {notification.data?.ticketId && (
-                <button 
+                <button
                   onClick={handleViewDetails}
                   className="flex items-center gap-2 text-[#154751] hover:opacity-80 transition-opacity"
                 >
@@ -221,8 +170,6 @@ const NotificationsPanel = () => {
                   <ChevronRight size={16} />
                 </button>
               )}
-              
-              {/* Unread Indicator - Moved here */}
               {isUnread && (
                 <div className="w-2 h-2 rounded-full bg-[#154751] border border-white flex-shrink-0" />
               )}
@@ -234,13 +181,11 @@ const NotificationsPanel = () => {
   };
 
   return (
-    <div className="w-full max-w-[682px] bg-white rounded-2xl shadow-lg p-6 md:p-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 pb-3 border-b border-[#E8E3E3] mb-6 pr-8">
+    <div className="w-full max-w-[682px] bg-white rounded-2xl shadow-lg p-6 md:p-4 relative">
+      {/* Header with Close Button */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 pb-3 border-b border-[#E8E3E3] mb-6">
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 flex items-center justify-center">
-            <Bell size={20} className="text-[#171417]" />
-          </div>
+          <Bell size={20} className="text-[#171417]" />
           <h2 className="font-dm-sans font-bold text-xl text-[#171417]">
             Notifications
           </h2>
@@ -251,47 +196,48 @@ const NotificationsPanel = () => {
           )}
         </div>
 
-        <button
-          onClick={async () => {
-            setIsMarkingAll(true);
-            await markAllAsRead();
-            setIsMarkingAll(false);
-          }}
-          disabled={unreadCount === 0 || isLoading || isMarkingAll}
-          className="flex items-center gap-1 px-4 py-1.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-opacity whitespace-nowrap"
-          style={{
-            background:
-              unreadCount > 0
-                ? "radial-gradient(50% 50% at 50% 50%, #154751 37%, #04171F 100%)"
-                : "linear-gradient(0deg, #ACC5CF, #ACC5CF)",
-          }}
-        >
-          {isMarkingAll ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span className="font-dm-sans text-sm font-normal">Marking...</span>
-            </>
-          ) : (
-            <>
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M13 2L5.5 9L3 7"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span className="font-dm-sans text-sm font-normal">Mark all as read</span>
-            </>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={async () => {
+              setIsMarkingAll(true);
+              await markAllAsRead();
+              setIsMarkingAll(false);
+            }}
+            disabled={unreadCount === 0 || isLoading || isMarkingAll}
+            className="flex items-center gap-1 px-4 py-1.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-opacity whitespace-nowrap"
+            style={{
+              background:
+                unreadCount > 0
+                  ? "radial-gradient(50% 50% at 50% 50%, #154751 37%, #04171F 100%)"
+                  : "linear-gradient(0deg, #ACC5CF, #ACC5CF)",
+            }}
+          >
+            {isMarkingAll ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span className="font-dm-sans text-sm font-normal">Marking...</span>
+              </>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 2L5.5 9L3 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="font-dm-sans text-sm font-normal">Mark all as read</span>
+              </>
+            )}
+          </button>
+
+          {/* Close Button */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              aria-label="Close notifications panel"
+            >
+              <X size={20} className="text-[#6B6969]" />
+            </button>
           )}
-        </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -324,9 +270,7 @@ const NotificationsPanel = () => {
                 {todayNotifications.length > 0 && (
                   <div>
                     <div className="px-4 py-2 mb-3">
-                      <span className="font-dm-sans font-medium text-base text-[#454345]">
-                        Today
-                      </span>
+                      <span className="font-dm-sans font-medium text-base text-[#454345]">Today</span>
                     </div>
                     <div className="space-y-3">
                       {todayNotifications.map((notification) => (
@@ -339,9 +283,7 @@ const NotificationsPanel = () => {
                 {olderNotifications.length > 0 && (
                   <div>
                     <div className="px-4 py-2 mb-3 mt-6">
-                      <span className="font-dm-sans font-medium text-base text-[#454345]">
-                        Older
-                      </span>
+                      <span className="font-dm-sans font-medium text-base text-[#454345]">Older</span>
                     </div>
                     <div className="space-y-3">
                       {olderNotifications.map((notification) => (

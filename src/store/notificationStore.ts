@@ -1,41 +1,36 @@
-// store/notificationStore.ts
+// src/store/notificationStore.ts
 import { create } from 'zustand';
 import {
   fetchNotificationPreferences,
   updateNotificationPreference,
-  NotificationPreference,
   NotificationType,
 } from '@/services/notificationService';
 
+interface NotificationPreference {
+  type: NotificationType;
+  email: boolean;
+  push: boolean;
+  inApp: boolean;
+}
+
 interface NotificationState {
-  // State
-  preferences: NotificationPreference[];
+  preferences: Partial<Record<NotificationType, NotificationPreference>>;
   loading: boolean;
   error: string | null;
-  updating: Record<string, boolean>; // Track loading per preference
-  updateError: Record<string, string | null>; // Track errors per preference
+  updating: Record<string, boolean>;
+  updateError: Record<string, string | null>;
+  hasInitialized: boolean; // ← NEW: Track if we've applied defaults once
 
-  // Actions
-  setPreferences: (preferences: NotificationPreference[]) => void;
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-  clearError: () => void;
-
-  // API Actions
   fetchPreferences: () => Promise<void>;
   updatePreference: (
-    notificationType: NotificationType,
+    type: NotificationType,
     method: 'PUSH' | 'EMAIL',
     enabled: boolean
   ) => Promise<boolean>;
-
-  // Helper
-  getPreference: (
-    notificationType: NotificationType
-  ) => NotificationPreference | undefined;
+  getPreference: (type: NotificationType) => NotificationPreference | null;
+  clearUpdateError: (key: string) => void;
 }
 
-// List of all notification types from backend
 const ALL_NOTIFICATION_TYPES: NotificationType[] = [
   'BOOKING_UPDATE',
   'JOB_STARTED',
@@ -73,96 +68,124 @@ const ALL_NOTIFICATION_TYPES: NotificationType[] = [
 ];
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
-  // Initial State
-  preferences: [],
+  preferences: {},
   loading: false,
   error: null,
   updating: {},
   updateError: {},
+  hasInitialized: false,
 
-  // Basic Actions
-  setPreferences: (preferences) => set({ preferences }),
-
-  setLoading: (loading) => set({ loading }),
-
-  setError: (error) => set({ error }),
-
-  clearError: () => set({ error: null }),
-
-  // API Actions
   fetchPreferences: async () => {
+    const { hasInitialized } = get();
+
     set({ loading: true, error: null });
+
     try {
       const response = await fetchNotificationPreferences();
-      console.log('✅ Notification preferences fetched:', response);
+      console.log('Fetched global notification defaults:', response);
 
-      // Create preference objects for all notification types
-      // Response format: { IN_APP: boolean, EMAIL: boolean, PUSH: boolean }
-      const preferences: NotificationPreference[] = ALL_NOTIFICATION_TYPES.map(
-        (type) => ({
-          type,
-          email: response.EMAIL || false,
-          push: response.PUSH || false,
-          inApp: response.IN_APP !== false, // IN_APP is always true or defaults to true
-        })
-      );
+      const defaults = {
+        email: !!response?.EMAIL,
+        push: !!response?.PUSH,
+        inApp: response?.IN_APP !== false,
+      };
 
-      set({
-        preferences,
-        loading: false,
+      set((state) => {
+        const newPreferences = { ...state.preferences };
+
+        // Only apply defaults to types that don't already have user settings
+        ALL_NOTIFICATION_TYPES.forEach((type) => {
+          if (!newPreferences[type]) {
+            newPreferences[type] = {
+              type,
+              email: defaults.email,
+              push: defaults.push,
+              inApp: defaults.inApp,
+            };
+          }
+          // If user has already toggled it → preserve their choice
+        });
+
+        return {
+          preferences: newPreferences,
+          loading: false,
+          hasInitialized: true, // Mark as initialized after first load
+        };
       });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to fetch preferences';
-      set({ error: errorMessage, loading: false });
-      console.error('Fetch preferences error:', error);
+      const msg = error instanceof Error ? error.message : 'Failed to load preferences';
+      set({ error: msg, loading: false });
+      console.error('Error fetching preferences:', error);
     }
   },
 
-  // Update single preference
-  updatePreference: async (notificationType, method, enabled) => {
-    const key = `${notificationType}-${method}`;
-    set((state) => ({
-      updating: { ...state.updating, [key]: true },
-      updateError: { ...state.updateError, [key]: null },
-    }));
+  updatePreference: async (type, method, enabled) => {
+    const key = `${type}-${method}`;
+
+    // Optimistic update
+    set((state) => {
+      const current = state.preferences[type];
+      const updatedPref: NotificationPreference = {
+        type,
+        email: current?.email ?? false,
+        push: current?.push ?? false,
+        inApp: current?.inApp ?? true,
+        [method.toLowerCase()]: enabled,
+      };
+
+      return {
+        updating: { ...state.updating, [key]: true },
+        updateError: { ...state.updateError, [key]: null },
+        preferences: {
+          ...state.preferences,
+          [type]: updatedPref,
+        },
+      };
+    });
 
     try {
-      await updateNotificationPreference(notificationType, method, enabled);
-      console.log(
-        `✅ Preference updated: ${notificationType} ${method} = ${enabled}`
-      );
+      await updateNotificationPreference(type, method, enabled);
+      console.log(`Preference saved: ${type} ${method} = ${enabled}`);
 
-      // Update local state
+      // Success: just clear loading
       set((state) => ({
-        preferences: state.preferences.map((pref) => {
-          if (pref.type === notificationType) {
-            return {
-              ...pref,
-              [method.toLowerCase()]: enabled,
-            };
-          }
-          return pref;
-        }),
         updating: { ...state.updating, [key]: false },
       }));
 
       return true;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to update preference';
-      set((state) => ({
-        updating: { ...state.updating, [key]: false },
-        updateError: { ...state.updateError, [key]: errorMessage },
-      }));
-      console.error('Update preference error:', error);
+      const msg = error instanceof Error ? error.message : 'Failed to update preference';
+
+      // Revert optimistic change
+      set((state) => {
+        const current = state.preferences[type];
+        if (!current) return state;
+
+        return {
+          preferences: {
+            ...state.preferences,
+            [type]: {
+              ...current,
+              [method.toLowerCase()]: !enabled,
+            },
+          },
+          updating: { ...state.updating, [key]: false },
+          updateError: { ...state.updateError, [key]: msg },
+        };
+      });
+
+      console.error('Update failed:', error);
       return false;
     }
   },
 
-  // Get single preference
-  getPreference: (notificationType) => {
-    const { preferences } = get();
-    return preferences.find((pref) => pref.type === notificationType);
+  getPreference: (type) => {
+    return get().preferences[type] ?? null;
+  },
+
+  clearUpdateError: (key) => {
+    set((state) => ({
+      updateError: { ...state.updateError, [key]: null },
+    }));
   },
 }));

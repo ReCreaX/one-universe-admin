@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useEffect } from 'react';
-import { AlertCircle, Loader2, CheckCircle } from 'lucide-react';
-import { useNotificationStore } from '@/store/notificationStore';
+import React, { useEffect } from "react";
+import { AlertCircle, Loader2, CheckCircle } from "lucide-react";
+import { useNotificationStore } from "@/store/notificationStore";
 import {
   getNotificationTypeLabel,
   NotificationType,
-} from '@/services/notificationService';
+} from "@/services/notificationService";
 
 /**
  * Toggle Switch Component
@@ -22,13 +22,13 @@ const ToggleSwitch: React.FC<{
     className="relative w-[42px] h-[24px] rounded-full transition-colors disabled:opacity-50"
     style={{
       background: enabled
-        ? 'linear-gradient(to right, #154751, #04171F)'
-        : '#E3E5E5',
+        ? "linear-gradient(to right, #154751, #04171F)"
+        : "#E3E5E5",
     }}
   >
     <div
       className="absolute top-[2px] w-[20px] h-[20px] rounded-full bg-white shadow-sm transition-transform duration-300"
-      style={{ transform: enabled ? 'translateX(20px)' : 'translateX(2px)' }}
+      style={{ transform: enabled ? "translateX(20px)" : "translateX(2px)" }}
     />
   </button>
 );
@@ -49,24 +49,25 @@ const NotificationRow: React.FC<NotificationRowProps> = ({
     useNotificationStore();
 
   const preference = getPreference(notificationType);
+
+  // If preference not loaded yet, don't render (will show loading at parent level)
+  if (!preference) return null;
+
   const emailKey = `${notificationType}-EMAIL`;
   const pushKey = `${notificationType}-PUSH`;
-  const isUpdatingEmail = updating[emailKey];
-  const isUpdatingPush = updating[pushKey];
+
+  const isUpdatingEmail = updating[emailKey] || false;
+  const isUpdatingPush = updating[pushKey] || false;
   const emailErr = updateError[emailKey];
   const pushErr = updateError[pushKey];
 
   const handleEmailToggle = async (enabled: boolean) => {
-    await updatePreference(notificationType, 'EMAIL', enabled);
+    await updatePreference(notificationType, "EMAIL", enabled);
   };
 
   const handlePushToggle = async (enabled: boolean) => {
-    await updatePreference(notificationType, 'PUSH', enabled);
+    await updatePreference(notificationType, "PUSH", enabled);
   };
-
-  if (!preference) {
-    return null;
-  }
 
   return (
     <div className="space-y-2">
@@ -74,6 +75,7 @@ const NotificationRow: React.FC<NotificationRowProps> = ({
         <span className="font-dm-sans text-sm md:text-base leading-[140%] text-[#6B6969] flex-1 md:w-[200px]">
           {label}
         </span>
+
         <div className="flex gap-8 md:gap-[150px]">
           {/* Email Toggle */}
           <div className="w-[56px] flex justify-center relative">
@@ -111,8 +113,8 @@ const NotificationRow: React.FC<NotificationRowProps> = ({
 
       {/* Error Messages */}
       {(emailErr || pushErr) && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex items-center gap-2">
-          <AlertCircle className="text-red-500" size={16} />
+        <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex items-center gap-2 mx-4 md:mx-0">
+          <AlertCircle className="text-red-500 flex-shrink-0" size={16} />
           <p className="text-red-700 text-xs md:text-sm">
             {emailErr || pushErr}
           </p>
@@ -129,12 +131,51 @@ export const NotificationTab = () => {
   const { preferences, loading, error, fetchPreferences } =
     useNotificationStore();
 
-  // Fetch preferences on mount
+  // Fetch on mount
   useEffect(() => {
     fetchPreferences();
   }, [fetchPreferences]);
 
-  if (loading && preferences.length === 0) {
+  // Get all types to render (in consistent order)
+  const allTypes: NotificationType[] = [
+    'BOOKING_UPDATE',
+    'JOB_STARTED',
+    'JOB_COMPLETED',
+    'JOB_CONFIRMED',
+    'ADMIN_DISBURSEMENT',
+    'GENERAL',
+    'DISPUTE_NOTIFICATION',
+    'ACCOUNT_UPDATE',
+    'SECURITY',
+    'ACCOUNT_DELETION',
+    'PASSWORD_CHANGE',
+    'EMAIL_CHANGE',
+    'RENEGOTIATION',
+    'WARNING',
+    'SERVICE_QUOTE',
+    'BUYER_DECLINE',
+    'BUYER_ACCEPT',
+    'SELLER_ACCEPT',
+    'SELLER_DECLINE',
+    'SERVICE_REQUEST',
+    'SYSTEM',
+    'PANIC_ALERT',
+    'GET_HELP_SUPPORT',
+    'QUOTE_UPDATED',
+    'BOOKING_CREATED',
+    'BOOKING_ACCEPTED_BUYER',
+    'BOOKING_DECLINE_BUYER',
+    'BOOKING_ACCEPTED_SELLER',
+    'BOOKING_DECLINE_SELLER',
+    'NEW_MESSAGE',
+    'PAYMENT_REQUEST',
+    'VERIFICATION',
+    'SUBSCRIBE',
+  ];
+
+  const hasPreferences = Object.keys(preferences).length > 0;
+
+  if (loading && !hasPreferences) {
     return (
       <div className="w-full flex items-center justify-center py-12">
         <div className="flex items-center gap-3">
@@ -157,7 +198,7 @@ export const NotificationTab = () => {
         </p>
       </div>
 
-      {/* Error State */}
+      {/* Global Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
           <AlertCircle className="text-red-500" size={20} />
@@ -170,10 +211,10 @@ export const NotificationTab = () => {
         </div>
       )}
 
-      {/* Success State */}
-      {preferences.length > 0 && !error && (
+      {/* Preferences List */}
+      {hasPreferences && !error && (
         <div className="space-y-5">
-          {/* Header Row */}
+          {/* Table Header */}
           <div className="flex items-center justify-between h-[28px] border-b border-[#E3E5E5]">
             <span className="font-dm-sans font-bold text-sm md:text-base text-[#171417]">
               Alert Type
@@ -188,16 +229,21 @@ export const NotificationTab = () => {
             </div>
           </div>
 
-          {/* Notification Rows */}
-          {preferences.map((pref) => (
-            <NotificationRow
-              key={pref.type}
-              label={getNotificationTypeLabel(pref.type as NotificationType)}
-              notificationType={pref.type as NotificationType}
-            />
-          ))}
+          {/* Rows */}
+          {allTypes.map((type) => {
+            const pref = preferences[type];
+            if (!pref) return null; // Skip if somehow missing
 
-          {/* Info Message */}
+            return (
+              <NotificationRow
+                key={type}
+                label={getNotificationTypeLabel(type)}
+                notificationType={type}
+              />
+            );
+          })}
+
+          {/* Info Note */}
           <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
             <CheckCircle className="text-blue-500 flex-shrink-0 mt-0.5" size={20} />
             <p className="text-blue-700 text-sm font-dm-sans">
@@ -208,7 +254,7 @@ export const NotificationTab = () => {
       )}
 
       {/* Empty State */}
-      {!loading && preferences.length === 0 && !error && (
+      {!loading && !hasPreferences && !error && (
         <div className="text-center py-12">
           <p className="text-[#6B6969] font-dm-sans">
             No notification preferences available
