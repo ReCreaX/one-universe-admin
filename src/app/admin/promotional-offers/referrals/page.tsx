@@ -359,7 +359,7 @@ const ReferralDashboard = () => {
           <div className="border-t border-[#E8E3E3] pt-2">
             <p className="font-dm-sans font-bold text-2xl text-[#171417]">
               {stats?.currentRewardRate && stats.currentRewardRate > 0
-                ? `₦${stats.currentRewardRate.toLocaleString()}`
+                ? `%${stats.currentRewardRate.toLocaleString()}`
                 : "Not Set"}
             </p>
             <div className="font-dm-sans text-xs text-[#D84040] mt-1 flex items-center gap-1">
