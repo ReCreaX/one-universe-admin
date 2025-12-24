@@ -1,5 +1,5 @@
 import React from "react";
-import { X, ArrowLeft } from "lucide-react";
+import { X, ArrowLeft, CircleCheck, Clock, Loader2, AlertTriangle } from "lucide-react";
 import { Referral } from "@/types/Referral";
 
 interface ReferralDetailModalProps {
@@ -37,20 +37,73 @@ const ReferralDetailModal: React.FC<ReferralDetailModalProps> = ({
     },
   ];
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Paid":
-        return { bg: "bg-[#E0F5E6]", text: "text-[#1FC16B]", dot: "bg-[#1FC16B]" };
-      case "Pending":
-        return { bg: "bg-[#FFF2B9]", text: "text-[#9D7F04]", dot: "bg-[#9D7F04]" };
-      case "Processing":
-        return { bg: "bg-[#D3E1FF]", text: "text-[#007BFF]", dot: "bg-[#007BFF]" };
+  // ✅ NEW: Transaction status badge configuration
+  const getTransactionConfig = (status: Referral["firstTransaction"]) => {
+    const normalizedStatus = status?.toUpperCase();
+    
+    switch (normalizedStatus) {
+      case 'COMPLETED':
+        return {
+          icon: <CircleCheck size={16} className="text-[#1FC16B]" />,
+          bgClass: "bg-[#E0F5E6]",
+          textClass: "text-[#1FC16B]",
+          label: "Completed"
+        };
+      case 'PENDING':
+        return {
+          icon: <Clock size={16} className="text-[#9D7F04]" />,
+          bgClass: "bg-[#FFF2B9]",
+          textClass: "text-[#9D7F04]",
+          label: "Pending"
+        };
       default:
-        return { bg: "bg-[#F5F5F5]", text: "text-[#454345]", dot: "bg-[#454345]" };
+        return {
+          icon: <AlertTriangle size={16} className="text-[#272727]" />,
+          bgClass: "bg-[#E5E5E5]",
+          textClass: "text-[#272727]",
+          label: status || "Unknown"
+        };
     }
   };
 
-  const statusColor = getStatusColor(referral.status);
+  // ✅ NEW: Payment status badge configuration
+  const getStatusConfig = (status: Referral["status"]) => {
+    const normalizedStatus = status?.toUpperCase();
+    
+    switch (normalizedStatus) {
+      case 'PAID':
+        return {
+          icon: <CircleCheck size={16} className="text-[#1FC16B]" />,
+          bgClass: "bg-[#E0F5E6]",
+          textClass: "text-[#1FC16B]",
+          label: "Paid"
+        };
+      case 'PENDING':
+        return {
+          icon: <Clock size={16} className="text-[#9D7F04]" />,
+          bgClass: "bg-[#FFF2B9]",
+          textClass: "text-[#9D7F04]",
+          label: "Pending"
+        };
+      case 'PROCESSING':
+        return {
+          icon: <Loader2 size={16} className="text-[#007BFF]" />,
+          bgClass: "bg-[#D3E1FF]",
+          textClass: "text-[#007BFF]",
+          label: "Processing"
+        };
+      default:
+        return {
+          icon: <Clock size={16} className="text-[#272727]" />,
+          bgClass: "bg-[#E5E5E5]",
+          textClass: "text-[#272727]",
+          label: status || "Unknown"
+        };
+    }
+  };
+
+  const transactionConfig = getTransactionConfig(referral.firstTransaction);
+  const statusConfig = getStatusConfig(referral.status);
 
   return (
     <>
@@ -122,31 +175,30 @@ const ReferralDetailModal: React.FC<ReferralDetailModalProps> = ({
                 </span>
               </div>
 
-              {/* First Transaction */}
+              {/* First Transaction - ✅ NEW: Beautiful badge with icon */}
               <div className="flex items-center justify-between">
                 <span className="font-dm-sans font-medium text-base text-[#171417]">
                   First Transaction
                 </span>
-                <div className={`inline-flex items-center px-3 py-1 rounded-lg ${
-                  referral.firstTransaction === "Completed"
-                    ? "bg-[#E0F5E6] text-[#1FC16B]"
-                    : "bg-[#FFF2B9] text-[#9D7F04]"
-                }`}>
-                  <span className="font-dm-sans text-sm font-medium">{referral.firstTransaction}</span>
-                </div>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-dm-sans ${transactionConfig.bgClass} ${transactionConfig.textClass}`}
+                >
+                  {transactionConfig.icon}
+                  {transactionConfig.label}
+                </span>
               </div>
 
-              {/* Status */}
+              {/* Status - ✅ NEW: Beautiful badge with icon */}
               <div className="flex items-center justify-between">
                 <span className="font-dm-sans font-medium text-base text-[#171417]">
                   Status
                 </span>
-                <div className={`flex items-center gap-2 px-2 py-1 rounded-lg ${statusColor.bg}`}>
-                  <div className={`w-4 h-4 rounded-full ${statusColor.dot}`} />
-                  <span className={`font-dm-sans font-medium text-sm ${statusColor.text}`}>
-                    {referral.status}
-                  </span>
-                </div>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-dm-sans ${statusConfig.bgClass} ${statusConfig.textClass}`}
+                >
+                  {statusConfig.icon}
+                  {statusConfig.label}
+                </span>
               </div>
 
               {/* Sign Up Date */}

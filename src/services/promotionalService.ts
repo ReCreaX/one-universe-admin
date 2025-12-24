@@ -29,6 +29,13 @@ export interface PromotionalStats {
   newUsers: number;
 }
 
+// ✅ NEW: Individual promotion stats interface
+export interface PromotionDetailStats {
+  redemptions: number;
+  totalValue: number;
+  newUsers: number;
+}
+
 interface PromotionsListResponse {
   items: PromotionalOfferAPI[];
   page: number;
@@ -117,7 +124,6 @@ class PromotionalService {
    * Validate page and pageSize parameters
    */
   private validatePaginationParams(page: any, pageSize: any): { page: number; pageSize: number } {
-    // Validate page
     let validPage = 1;
     if (page !== undefined && page !== null) {
       const pageNum = Number(page);
@@ -130,7 +136,6 @@ class PromotionalService {
       }
     }
 
-    // Validate pageSize
     let validPageSize = 20;
     if (pageSize !== undefined && pageSize !== null) {
       const pageSizeNum = Number(pageSize);
@@ -156,12 +161,9 @@ class PromotionalService {
     console.log(`📥 Input parameters: page=${page}, pageSize=${pageSize}`);
 
     try {
-      // Validate parameters
       const { page: validPage, pageSize: validPageSize } = this.validatePaginationParams(page, pageSize);
-
       const endpoint = `/promotions?page=${validPage}&pageSize=${validPageSize}`;
       console.log(`🔗 Endpoint: ${endpoint}`);
-
       return await this.request(endpoint);
     } catch (error) {
       console.error("❌ getAllPromotions error:", error);
@@ -186,6 +188,16 @@ class PromotionalService {
     console.log("\n=== getPromotionById ===");
     console.log("promotionId:", promotionId);
     return this.request(`/promotions/${encodeURIComponent(promotionId)}`);
+  }
+
+  /**
+   * ✅ NEW: Get stats for a specific promotion
+   * GET /promotions/{id}/stats
+   */
+  async getPromotionStats(promotionId: string): Promise<PromotionDetailStats> {
+    console.log("\n=== getPromotionStats ===");
+    console.log("promotionId:", promotionId);
+    return this.request(`/promotions/${encodeURIComponent(promotionId)}/stats`);
   }
 
   /**

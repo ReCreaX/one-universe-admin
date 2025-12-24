@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Eye, Edit2, Trash2 } from "lucide-react";
+import { Eye, Edit2, Trash2, CircleCheck, Clock, Flag, ShoppingBag, Truck, Package, Coins } from "lucide-react";
 import PromotionalEmptyState from "./PromotionalEmptyState";
 import PromotionDetailModal from "./modal/PromotionDetailModal";
 import CreatePromoOfferModal from "./modal/CreatePromoOfferModal";
@@ -103,31 +103,91 @@ const PromotionalOffersTable = ({ promotions }: PromotionalOffersTableProps) => 
     }, 150);
   };
 
-  const getStatusStyles = (status: string) => {
-    switch (status) {
-      case "Active":
-        return "bg-[#E0F5E6] text-[#1FC16B]";
-      case "Draft":
-        return "bg-[#D3E1FF] text-[#007BFF]";
-      case "Expired":
-        return "bg-[#FFE8E8] text-[#D32F2F]";
+  // ✅ NEW: Status badge configuration with icons
+  const getStatusConfig = (status: string, isMobile: boolean = false) => {
+    const normalizedStatus = status?.toUpperCase();
+    const iconSize = isMobile ? 14 : 16;
+    
+    switch (normalizedStatus) {
+      case 'ACTIVE':
+        return {
+          icon: <CircleCheck size={iconSize} className="text-[#1FC16B]" />,
+          bgClass: "bg-[#E0F5E6]",
+          textClass: "text-[#1FC16B]",
+          label: "Active"
+        };
+      case 'DRAFT':
+        return {
+          icon: <Clock size={iconSize} className="text-[#272727]" />,
+          bgClass: "bg-[#E5E5E5]",
+          textClass: "text-[#272727]",
+          label: "Draft"
+        };
+      case 'EXPIRED':
+        return {
+          icon: <Flag size={iconSize} className="text-[#D00416]" />,
+          bgClass: "bg-[#FB37481A]",
+          textClass: "text-[#D00416]",
+          label: "Expired"
+        };
+      case 'INACTIVE':
+        return {
+          icon: <Flag size={iconSize} className="text-[#D00416]" />,
+          bgClass: "bg-[#FB37481A]",
+          textClass: "text-[#D00416]",
+          label: "Inactive"
+        };
       default:
-        return "";
+        return {
+          icon: <Clock size={iconSize} className="text-[#272727]" />,
+          bgClass: "bg-[#E5E5E5]",
+          textClass: "text-[#272727]",
+          label: status || "Unknown"
+        };
     }
   };
 
-  const getTypeStyles = (type: string) => {
-    switch (type) {
-      case "DISCOUNT":
-        return "bg-[#FFF1E6] text-[#E67E22]";
-      case "FREE_SHIPPING":
-        return "bg-[#E8F5E9] text-[#388E3C]";
-      case "BUNDLE":
-        return "bg-[#F3E5F5] text-[#7B1FA2]";
-      case "CASHBACK":
-        return "bg-[#FFF8E1] text-[#F57F17]";
+  // ✅ NEW: Type badge configuration with icons
+  const getTypeConfig = (type: string, isMobile: boolean = false) => {
+    const normalizedType = type?.toUpperCase();
+    const iconSize = isMobile ? 14 : 16;
+    
+    switch (normalizedType) {
+      case 'DISCOUNT':
+        return {
+          icon: <ShoppingBag size={iconSize} className="text-[#E67E22]" />,
+          bgClass: "bg-[#FFF1E6]",
+          textClass: "text-[#E67E22]",
+          label: "Discount"
+        };
+      case 'FREE_SHIPPING':
+        return {
+          icon: <Truck size={iconSize} className="text-[#388E3C]" />,
+          bgClass: "bg-[#E8F5E9]",
+          textClass: "text-[#388E3C]",
+          label: "Free Shipping"
+        };
+      case 'BUNDLE':
+        return {
+          icon: <Package size={iconSize} className="text-[#7B1FA2]" />,
+          bgClass: "bg-[#F3E5F5]",
+          textClass: "text-[#7B1FA2]",
+          label: "Bundle"
+        };
+      case 'CASHBACK':
+        return {
+          icon: <Coins size={iconSize} className="text-[#F57F17]" />,
+          bgClass: "bg-[#FFF8E1]",
+          textClass: "text-[#F57F17]",
+          label: "Cashback"
+        };
       default:
-        return "";
+        return {
+          icon: <ShoppingBag size={iconSize} className="text-[#6B6969]" />,
+          bgClass: "bg-[#E6E8E9]",
+          textClass: "text-[#6B6969]",
+          label: type || "Other"
+        };
     }
   };
 
@@ -164,216 +224,221 @@ const PromotionalOffersTable = ({ promotions }: PromotionalOffersTableProps) => 
                 </tr>
               </thead>
               <tbody>
-                {promotions.map((promo) => (
-                  <tr
-                    key={promo.id}
-                    className="bg-white border-b border-[#E5E5E5] hover:bg-[#FAFAFA]"
-                  >
-                    <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">
-                      {promo.title || promo.offerTitle}
-                    </td>
-                    <td className="py-[18px] px-[25px]">
-                      <div
-                        className={`inline-flex items-center px-3 py-1 rounded-lg w-fit ${getTypeStyles(
-                          promo.type
-                        )}`}
-                      >
-                        <span className="font-dm-sans text-sm font-medium">
-                          {promo.type}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">
-                      {promo.eligibleUser}
-                    </td>
-                    <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">
-                      {promo.endDate}
-                    </td>
-                    <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237] font-medium">
-                      {(promo.redemptions || 0).toLocaleString()}
-                    </td>
-                    <td className="py-[18px] px-[25px]">
-                      <div
-                        className={`inline-flex items-center px-3 py-1 rounded-lg ${getStatusStyles(
-                          promo.status || "Draft"
-                        )}`}
-                      >
-                        <span className="font-dm-sans text-sm font-medium">
-                          {promo.status || "Draft"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-[18px] px-[25px] relative">
-                      <button
-                        onClick={(e) => handleActionClick(promo.id, e)}
-                        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                      >
-                        <svg
-                          width="20"
-                          height="20"
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          className="text-[#303237]"
+                {promotions.map((promo) => {
+                  const statusConfig = getStatusConfig(promo.status || "Draft");
+                  const typeConfig = getTypeConfig(promo.type);
+                  
+                  return (
+                    <tr
+                      key={promo.id}
+                      className="bg-white border-b border-[#E5E5E5] hover:bg-[#FAFAFA]"
+                    >
+                      <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">
+                        {promo.title || promo.offerTitle}
+                      </td>
+                      <td className="py-[18px] px-[25px]">
+                        {/* ✅ NEW: Type badge with icon */}
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-dm-sans ${typeConfig.bgClass} ${typeConfig.textClass}`}
                         >
-                          <circle cx="10" cy="5" r="2" fill="currentColor" />
-                          <circle cx="10" cy="10" r="2" fill="currentColor" />
-                          <circle cx="10" cy="15" r="2" fill="currentColor" />
-                        </svg>
-                      </button>
+                          {typeConfig.icon}
+                          {typeConfig.label}
+                        </span>
+                      </td>
+                      <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">
+                        {promo.eligibleUser}
+                      </td>
+                      <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237]">
+                        {promo.endDate}
+                      </td>
+                      <td className="py-[18px] px-[25px] font-dm-sans text-base text-[#303237] font-medium">
+                        {(promo.redemptions || 0).toLocaleString()}
+                      </td>
+                      <td className="py-[18px] px-[25px]">
+                        {/* ✅ NEW: Status badge with icon */}
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-dm-sans ${statusConfig.bgClass} ${statusConfig.textClass}`}
+                        >
+                          {statusConfig.icon}
+                          {statusConfig.label}
+                        </span>
+                      </td>
+                      <td className="py-[18px] px-[25px] relative">
+                        <button
+                          onClick={(e) => handleActionClick(promo.id, e)}
+                          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 20 20"
+                            fill="none"
+                            className="text-[#303237]"
+                          >
+                            <circle cx="10" cy="5" r="2" fill="currentColor" />
+                            <circle cx="10" cy="10" r="2" fill="currentColor" />
+                            <circle cx="10" cy="15" r="2" fill="currentColor" />
+                          </svg>
+                        </button>
 
-                      {openMenuId === promo.id && (
-                        <div
-                          className="fixed w-42 bg-white rounded-[20px] shadow-[0px_8px_29px_0px_#5F5E5E30] border border-[#E5E7EF] overflow-hidden z-50"
-                          style={{
-                            top: menuPosition.top,
-                            left: menuPosition.left,
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            onClick={() => handleView(promo)}
-                            className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
+                        {openMenuId === promo.id && (
+                          <div
+                            className="fixed w-42 bg-white rounded-[20px] shadow-[0px_8px_29px_0px_#5F5E5E30] border border-[#E5E7EF] overflow-hidden z-50"
+                            style={{
+                              top: menuPosition.top,
+                              left: menuPosition.left,
+                            }}
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <Eye className="w-4.5 h-4.5 text-[#454345]" />
-                            <span className="font-dm-sans text-base text-[#454345]">
-                              View Offer
-                            </span>
-                          </button>
-                          <button
-                            onClick={() => handleEdit(promo)}
-                            className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
-                          >
-                            <Edit2 className="w-4.5 h-4.5 text-[#454345]" />
-                            <span className="font-dm-sans text-base text-[#454345]">
-                              Edit Offer
-                            </span>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(promo)}
-                            className="w-full flex items-center gap-2.5 px-6 py-4.5 hover:bg-[#FAFAFA] transition text-red-600"
-                          >
-                            <Trash2 className="w-4.5 h-4.5 text-red-600" />
-                            <span className="font-dm-sans text-base text-red-600">
-                              Delete Offer
-                            </span>
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                            <button
+                              onClick={() => handleView(promo)}
+                              className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
+                            >
+                              <Eye className="w-4.5 h-4.5 text-[#454345]" />
+                              <span className="font-dm-sans text-base text-[#454345]">
+                                View Offer
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => handleEdit(promo)}
+                              className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
+                            >
+                              <Edit2 className="w-4.5 h-4.5 text-[#454345]" />
+                              <span className="font-dm-sans text-base text-[#454345]">
+                                Edit Offer
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(promo)}
+                              className="w-full flex items-center gap-2.5 px-6 py-4.5 hover:bg-[#FAFAFA] transition text-red-600"
+                            >
+                              <Trash2 className="w-4.5 h-4.5 text-red-600" />
+                              <span className="font-dm-sans text-base text-red-600">
+                                Delete Offer
+                              </span>
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           {/* Mobile Cards */}
           <div className="md:hidden space-y-4 p-4">
-            {promotions.map((promo) => (
-              <div
-                key={promo.id}
-                className="bg-white border border-[#E8E3E3] rounded-lg p-4 shadow-sm"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <p className="font-dm-sans font-medium text-base text-[#303237] mb-1">
-                      {promo.title || promo.offerTitle}
-                    </p>
-                    <p className="font-dm-sans text-sm text-[#454345]">
-                      {promo.offerId}
-                    </p>
-                  </div>
-                  <button
-                    onClick={(e) => handleActionClick(promo.id, e)}
-                    className="p-2 rounded-lg hover:bg-gray-100"
-                  >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      className="text-[#303237]"
+            {promotions.map((promo) => {
+              const statusConfig = getStatusConfig(promo.status || "Draft", true);
+              const typeConfig = getTypeConfig(promo.type, true);
+              
+              return (
+                <div
+                  key={promo.id}
+                  className="bg-white border border-[#E8E3E3] rounded-lg p-4 shadow-sm"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <p className="font-dm-sans font-medium text-base text-[#303237] mb-1">
+                        {promo.title || promo.offerTitle}
+                      </p>
+                      <p className="font-dm-sans text-sm text-[#454345]">
+                        {promo.offerId}
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => handleActionClick(promo.id, e)}
+                      className="p-2 rounded-lg hover:bg-gray-100"
                     >
-                      <circle cx="10" cy="5" r="2" fill="currentColor" />
-                      <circle cx="10" cy="10" r="2" fill="currentColor" />
-                      <circle cx="10" cy="15" r="2" fill="currentColor" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <div
-                    className={`inline-flex items-center px-2 py-1 rounded-lg text-xs ${getTypeStyles(
-                      promo.type
-                    )}`}
-                  >
-                    <span className="font-dm-sans font-medium">{promo.type}</span>
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        className="text-[#303237]"
+                      >
+                        <circle cx="10" cy="5" r="2" fill="currentColor" />
+                        <circle cx="10" cy="10" r="2" fill="currentColor" />
+                        <circle cx="10" cy="15" r="2" fill="currentColor" />
+                      </svg>
+                    </button>
                   </div>
-                  <div
-                    className={`inline-flex items-center px-2 py-1 rounded-lg text-xs ${getStatusStyles(
-                      promo.status || "Draft"
-                    )}`}
-                  >
-                    <span className="font-dm-sans font-medium">
-                      {promo.status || "Draft"}
+
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {/* ✅ NEW: Type badge with icon */}
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-dm-sans ${typeConfig.bgClass} ${typeConfig.textClass}`}
+                    >
+                      {typeConfig.icon}
+                      {typeConfig.label}
+                    </span>
+                    
+                    {/* ✅ NEW: Status badge with icon */}
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-dm-sans ${statusConfig.bgClass} ${statusConfig.textClass}`}
+                    >
+                      {statusConfig.icon}
+                      {statusConfig.label}
                     </span>
                   </div>
-                </div>
 
-                <div className="space-y-2 text-sm">
-                  <p className="font-dm-sans text-[#454345]">
-                    <span className="font-medium text-[#303237]">Users:</span>{" "}
-                    {promo.eligibleUser}
-                  </p>
-                  <p className="font-dm-sans text-[#454345]">
-                    <span className="font-medium text-[#303237]">Ends:</span>{" "}
-                    {promo.endDate}
-                  </p>
-                  <p className="font-dm-sans text-[#454345]">
-                    <span className="font-medium text-[#303237]">Redeemed:</span>{" "}
-                    {(promo.redemptions || 0).toLocaleString()}
-                  </p>
-                </div>
-
-                {openMenuId === promo.id && (
-                  <div
-                    className="fixed w-42 bg-white rounded-[20px] shadow-[0px_8px_29px_0px_#5F5E5E30] border border-[#E5E7EF] overflow-hidden z-50 mt-3"
-                    style={{
-                      top: menuPosition.top,
-                      left: menuPosition.left,
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={() => handleView(promo)}
-                      className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
-                    >
-                      <Eye className="w-4.5 h-4.5 text-[#454345]" />
-                      <span className="font-dm-sans text-base text-[#454345]">
-                        View Offer
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => handleEdit(promo)}
-                      className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
-                    >
-                      <Edit2 className="w-4.5 h-4.5 text-[#454345]" />
-                      <span className="font-dm-sans text-base text-[#454345]">
-                        Edit Offer
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => handleDelete(promo)}
-                      className="w-full flex items-center gap-2.5 px-6 py-4.5 hover:bg-[#FAFAFA] transition text-red-600"
-                    >
-                      <Trash2 className="w-4.5 h-4.5 text-red-600" />
-                      <span className="font-dm-sans text-base text-red-600">
-                        Delete Offer
-                      </span>
-                    </button>
+                  <div className="space-y-2 text-sm">
+                    <p className="font-dm-sans text-[#454345]">
+                      <span className="font-medium text-[#303237]">Users:</span>{" "}
+                      {promo.eligibleUser}
+                    </p>
+                    <p className="font-dm-sans text-[#454345]">
+                      <span className="font-medium text-[#303237]">Ends:</span>{" "}
+                      {promo.endDate}
+                    </p>
+                    <p className="font-dm-sans text-[#454345]">
+                      <span className="font-medium text-[#303237]">Redeemed:</span>{" "}
+                      {(promo.redemptions || 0).toLocaleString()}
+                    </p>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {openMenuId === promo.id && (
+                    <div
+                      className="fixed w-42 bg-white rounded-[20px] shadow-[0px_8px_29px_0px_#5F5E5E30] border border-[#E5E7EF] overflow-hidden z-50 mt-3"
+                      style={{
+                        top: menuPosition.top,
+                        left: menuPosition.left,
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        onClick={() => handleView(promo)}
+                        className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
+                      >
+                        <Eye className="w-4.5 h-4.5 text-[#454345]" />
+                        <span className="font-dm-sans text-base text-[#454345]">
+                          View Offer
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => handleEdit(promo)}
+                        className="w-full flex items-center gap-2.5 px-6 py-4.5 border-b border-[#E5E7EF] hover:bg-[#FAFAFA] transition"
+                      >
+                        <Edit2 className="w-4.5 h-4.5 text-[#454345]" />
+                        <span className="font-dm-sans text-base text-[#454345]">
+                          Edit Offer
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(promo)}
+                        className="w-full flex items-center gap-2.5 px-6 py-4.5 hover:bg-[#FAFAFA] transition text-red-600"
+                      >
+                        <Trash2 className="w-4.5 h-4.5 text-red-600" />
+                        <span className="font-dm-sans text-base text-red-600">
+                          Delete Offer
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       ) : (
