@@ -3,10 +3,7 @@
 
 import { cn } from "@/lib/utils";
 import {
-  CheckCircle,
   AlertTriangle,
-  Loader2,
-  CircleDot,
   Flag,
   Check,
   CircleCheck,
@@ -17,7 +14,7 @@ type DisplayStatus = "New" | "Under review" | "Resolved" | "Open";
 type ApiStatus = "OPEN" | "UNDER_REVIEW" | "RESOLVED";
 
 type DisputeStatusProps = {
-  status: DisplayStatus | ApiStatus;
+  status: DisplayStatus | ApiStatus | string;
 };
 
 const statusConfig: Record<
@@ -50,12 +47,21 @@ const statusConfig: Record<
   },
 };
 
-// Map API status to display status
-function mapApiStatusToDisplay(status: ApiStatus | DisplayStatus): DisplayStatus {
-  const statusMap: Record<ApiStatus, DisplayStatus> = {
+// Map API status to display status with fallback
+function mapApiStatusToDisplay(status: ApiStatus | DisplayStatus | string): DisplayStatus {
+  // Handle null or undefined
+  if (!status) {
+    return "Open";
+  }
+
+  const statusMap: Record<string, DisplayStatus> = {
     OPEN: "Open",
     UNDER_REVIEW: "Under review",
     RESOLVED: "Resolved",
+    // Handle lowercase versions
+    open: "Open",
+    under_review: "Under review",
+    resolved: "Resolved",
   };
 
   // If it's already a display status, return as is
@@ -64,12 +70,22 @@ function mapApiStatusToDisplay(status: ApiStatus | DisplayStatus): DisplayStatus
   }
 
   // Otherwise map from API status
-  return statusMap[status as ApiStatus];
+  return statusMap[status] || "Open";
 }
 
 export function DisputeStatus({ status }: DisputeStatusProps) {
   const displayStatus = mapApiStatusToDisplay(status);
   const config = statusConfig[displayStatus];
+
+  // Extra safety check (shouldn't be needed with the fallback above, but just in case)
+  if (!config) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[.875rem] font-medium bg-gray-100 text-gray-600">
+        <AlertTriangle size={16} />
+        {status || "Unknown"}
+      </span>
+    );
+  }
 
   return (
     <span
