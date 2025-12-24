@@ -164,7 +164,7 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ onClose }) => {
           return `/admin/dispute-management?disputeId=${ticketId}`;
         
         case "GET_HELP_SUPPORT":
-          return `/admin/support-feedback?ticketId=${ticketId}`;
+          return `/admin/support?ticketId=${ticketId}`;
         
         // Add other types that need redirection here
         // For now, only dispute and support redirect
